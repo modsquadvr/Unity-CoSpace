@@ -35,11 +35,14 @@ namespace Esri.APP
         /// <summary>
         ///   Calculates Pinch and Turn - This should be used inside LateUpdate
         /// </summary>
+        /// 
+ 
+
         static public void Calculate()
         {
             pinchDistance = pinchDistanceDelta = 0;
             turnAngle = turnAngleDelta = 0;
-
+           
             // if two fingers are touching the screen at the same time ...
             if (Input.touchCount == 2)
             {
@@ -81,6 +84,7 @@ namespace Esri.APP
                         turnAngle = turnAngleDelta = 0;
                     }
                 }
+
             }
         }
 

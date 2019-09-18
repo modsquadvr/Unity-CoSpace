@@ -67,8 +67,13 @@
     <Compile Include="Assets\EsriPrototypeLab\Scripts\Place.cs" />
     <Compile Include="Assets\EsriPrototypeLab\Scripts\SimpleJSON.cs" />
     <Compile Include="Assets\EsriPrototypeLab\Scripts\Tile.cs" />
+    <Compile Include="Assets\LightFollowing.cs" />
+    <Compile Include="Assets\Scripts\ButtonChangeView.cs" />
+    <Compile Include="Assets\Scripts\ButtonDimension.cs" />
+    <Compile Include="Assets\Scripts\ButtonMapstyle.cs" />
     <Compile Include="Assets\Scripts\DetectTouchMovement.cs" />
     <Compile Include="Assets\Scripts\MapLoading.cs" />
+    <Compile Include="Assets\ViewChanging.cs" />
     <Reference Include="Unity.PackageManagerUI.Editor">
       <HintPath>C:/Users/xixih/Documents/Nathan Sun/ESRI-Mitac/Library/ScriptAssemblies/Unity.PackageManagerUI.Editor.dll</HintPath>
     </Reference>

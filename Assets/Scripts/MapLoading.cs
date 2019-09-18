@@ -35,26 +35,30 @@ namespace Esri.APP {
         private bool _NeedReloadMap = false;
         private bool _isBuildingMap = false;
         public Place _place;
-        private Place[] places;
-
-
-        public float SIZE = 1f;
-
-        public int CHILDREN_LEVEL = 2; // 1 = Four child image tiles, 2 = Sixteen child images.
+        private Place[] places;      
         private readonly string queryURL = "http://127.0.0.1:8080/querydata.php";
         private string mapName;
         private string reloadmapname;
         private string m_xml = "initial";
         private DateTime m_datetime;
-        float deltaMagnitudeDiff = 0;
 
-
+        public float SIZE = 1f;
+        public int CHILDREN_LEVEL = 2; // 1 = Four child image tiles, 2 = Sixteen child images.
         public string currentDimension = "2D";
         public string currentStyle = "satellite";
-
+        public string currentView = "scene";
         public float perspectiveZoomSpeed = 0.5f;        // The rate of change of the field of view in perspective mode.
         public float orthoZoomSpeed = 0.5f;
         public Camera mainCamera;
+
+
+
+        public bool swiping;
+        public float minSwipeDistance;
+        public float errorRange = 5f;
+        public SwipeDirection direction = SwipeDirection.None;
+        public enum SwipeDirection { Right, Left, Up, Down, None }
+        private Touch initialTouch;
 
         public void Start()
         {
@@ -77,73 +81,9 @@ namespace Esri.APP {
             {
                 StartCoroutine(CheckExistmap(queryURL));
                 m_datetime = DateTime.Now;
-
             }
 
-
-            if (Input.GetAxis("Mouse ScrollWheel") > 0 && !_isBuildingMap)
-            {
-                _isBuildingMap = true;
-                Debug.Log(Input.GetAxis("Mouse ScrollWheel").ToString());
-                OnClickZoomIn();
-            }
-            //Zoom in
-            if (Input.GetAxis("Mouse ScrollWheel") < 0 && !_isBuildingMap)
-            {
-                _isBuildingMap = true;
-                Debug.Log(Input.GetAxis("Mouse ScrollWheel").ToString());
-                OnClickZoomOut();
-            }
-            /*
-            if (Input.touchCount == 2)
-            {
-                // Store both touches.
-                Touch touchZero = Input.GetTouch(0);
-                Touch touchOne = Input.GetTouch(1);
-
-                // Find the position in the previous frame of each touch.
-                Vector2 touchZeroPrevPos = touchZero.position - touchZero.deltaPosition;
-                Vector2 touchOnePrevPos = touchOne.position - touchOne.deltaPosition;
-
-                // Find the magnitude of the vector (the distance) between the touches in each frame.
-                float prevTouchDeltaMag = (touchZeroPrevPos - touchOnePrevPos).magnitude;
-                float touchDeltaMag = (touchZero.position - touchOne.position).magnitude;
-
-                // Find the difference in the distances between each frame.
-                deltaMagnitudeDiff = prevTouchDeltaMag - touchDeltaMag;              
-
-                
-                if (mainCamera.orthographic)
-                {
-                    // ... change the orthographic size based on the change in distance between the touches.
-                    mainCamera.orthographicSize += deltaMagnitudeDiff * orthoZoomSpeed;
-
-                    // Make sure the orthographic size never drops below zero.
-                    mainCamera.orthographicSize = Mathf.Max(mainCamera.orthographicSize, 0.1f);
-                }
-                else
-                {
-                    // Otherwise change the field of view based on the change in distance between the touches.
-                    mainCamera.fieldOfView += deltaMagnitudeDiff * perspectiveZoomSpeed;
-
-                    // Clamp the field of view to make sure it's between 0 and 180.
-                    mainCamera.fieldOfView = Mathf.Clamp(mainCamera.fieldOfView, 0.1f, 179.9f);
-                }
-                
-
-            }
-            
-            else if (Input.touchCount == 0)
-            {
-                if (deltaMagnitudeDiff > 0 && !_isBuildingMap)
-                    OnClickZoomOut();
-                else if(deltaMagnitudeDiff < 0 && !_isBuildingMap)
-                    OnClickZoomOut();
-
-                deltaMagnitudeDiff = 0;
-            }
-            */
-
+            DetectonMoveDirection();
 
         }
 
@@ -179,44 +119,187 @@ namespace Esri.APP {
                 }
             }
 
-                float pinchAmount = 0;
-                Quaternion desiredRotation = mainCamera.transform.rotation;
 
-                DetectTouchMovement.Calculate();
+            if (Input.GetAxis("Mouse ScrollWheel") > 0 && !_isBuildingMap)
+            {
+                _isBuildingMap = true;
+                Debug.Log(Input.GetAxis("Mouse ScrollWheel").ToString());
+                OnClickZoomIn();
+            }
+            //Zoom in
+            if (Input.GetAxis("Mouse ScrollWheel") < 0 && !_isBuildingMap)
+            {
+                _isBuildingMap = true;
+                Debug.Log(Input.GetAxis("Mouse ScrollWheel").ToString());
+                OnClickZoomOut();
+            }
 
-                if (Mathf.Abs(DetectTouchMovement.pinchDistanceDelta) > 0)
+            float pinchAmount = 0;
+            Quaternion desiredRotation = mainCamera.transform.rotation;
+
+            DetectTouchMovement.Calculate();
+
+            if (Mathf.Abs(DetectTouchMovement.pinchDistanceDelta) > 0)
                 { // zoom
                     pinchAmount = DetectTouchMovement.pinchDistanceDelta;
                 }
 
-                if (Mathf.Abs(DetectTouchMovement.turnAngleDelta) > 0)
+            if (Mathf.Abs(DetectTouchMovement.turnAngleDelta) > 0)
                 { // rotate
-                    Vector3 rotationDeg = Vector3.forward;
+                    Vector3 rotationDeg;
+                    rotationDeg = Vector3.forward;                      
                     rotationDeg.z = -DetectTouchMovement.turnAngleDelta;
                     desiredRotation *= Quaternion.Euler(rotationDeg);
                 }
-
+            if (currentView == "scene")
+            {
                 if (mainCamera.orthographic)
-                {
-                    // ... change the orthographic size based on the change in distance between the touches.
-                    mainCamera.orthographicSize += -pinchAmount * orthoZoomSpeed;
+                    {
+                        // ... change the orthographic size based on the change in distance between the touches.
+                        mainCamera.orthographicSize += -pinchAmount * orthoZoomSpeed;
 
-                    // Make sure the orthographic size never drops below zero.
-                    mainCamera.orthographicSize = Mathf.Max(mainCamera.orthographicSize, 0.1f);
-                }
-                else
-                {
-                    // Otherwise change the field of view based on the change in distance between the touches.
-                    mainCamera.fieldOfView += -pinchAmount * perspectiveZoomSpeed;
+                        // Make sure the orthographic size never drops below zero.
+                        mainCamera.orthographicSize = Mathf.Max(mainCamera.orthographicSize, 0.1f);
+                    }
+                    else
+                    {
+                        // Otherwise change the field of view based on the change in distance between the touches.
+                        mainCamera.fieldOfView += -pinchAmount * perspectiveZoomSpeed;
 
-                    // Clamp the field of view to make sure it's between 0 and 180.
-                    mainCamera.fieldOfView = Mathf.Clamp(mainCamera.fieldOfView, 0.1f, 179.9f);
+                        // Clamp the field of view to make sure it's between 0 and 180.
+                        mainCamera.fieldOfView = Mathf.Clamp(mainCamera.fieldOfView, 0.1f, 179.9f);
+                    }
+            }
+            else
+            {               
+
+                if (pinchAmount > 0 && !_isBuildingMap)
+                {
+                    _isBuildingMap = true;
+                    Debug.Log(pinchAmount);
+                    OnClickZoomIn();
                 }
+                //Zoom in
+                if (pinchAmount < 0 && !_isBuildingMap)
+                {
+                    _isBuildingMap = true;
+                    Debug.Log(pinchAmount);
+                    OnClickZoomOut();
+                }
+            }
+
+            if (currentDimension == "2D")
                 mainCamera.transform.rotation = desiredRotation;
+            else
+                mainCamera.transform.RotateAround(Vector3.zero, Vector3.up, DetectTouchMovement.turnAngleDelta);
 
+            switch(direction)
+            {
+                case SwipeDirection.Left:
+                    if (!_isBuildingMap)
+                    {
+                        _isBuildingMap = true;
+                        OnClickMoveLeft();
+                    }
+                    break;
+                case SwipeDirection.Right:
+                    if (!_isBuildingMap)
+                    {
+                        _isBuildingMap = true;
+                        OnClickMoveRight();
+                    }
+                    break;
+                case SwipeDirection.Up:
+                    if (!_isBuildingMap)
+                    {
+                        _isBuildingMap = true;
+                        OnClickMoveUp();
+                    }
+                    break;
+                case SwipeDirection.Down:
+                    if (!_isBuildingMap)
+                    {
+                        _isBuildingMap = true;
+                        OnClickMoveDown();
+                    }
+                    break;
+            }           
+           
+        }
 
+        public void DetectonMoveDirection()
+        {
+            //if one finger is touching the screen
+            if (Input.touchCount == 1)
+            {
+                Touch touch = Input.touches[0];
+                if (touch.phase == TouchPhase.Began)
+                {
+                    initialTouch = touch;
+                }
+                else if (touch.phase == TouchPhase.Moved)
+                {
+                    var deltaX = touch.position.x - initialTouch.position.x; //greater than 0 is right and less than zero is left
+                    var deltaY = touch.position.y - initialTouch.position.y; //greater than 0 is up and less than zero is down
+                    var swipeDistance = Mathf.Abs(deltaX) + Mathf.Abs(deltaY);
+
+                    if (swipeDistance > minSwipeDistance && (Mathf.Abs(deltaX) > 0 || Mathf.Abs(deltaY) > 0))
+                    {
+                        swiping = true;
+
+                        CalculateSwipeDirection(deltaX, deltaY);
+                    }
+                }
+                else if (touch.phase == TouchPhase.Ended)
+                {
+                    initialTouch = new Touch();
+                    swiping = false;
+                    direction = SwipeDirection.None;
+                }
+                else if (touch.phase == TouchPhase.Canceled)
+                {
+                    initialTouch = new Touch();
+                    swiping = false;
+                    direction = SwipeDirection.None;
+                }
+
+            }
 
         }
+
+
+
+        void CalculateSwipeDirection(float deltaX, float deltaY)
+        {
+            bool isHorizontalSwipe = Mathf.Abs(deltaX) > Mathf.Abs(deltaY);
+
+            // horizontal swipe
+            if (isHorizontalSwipe && Mathf.Abs(deltaY) <= errorRange)
+            {
+                //right
+                if (deltaX > 0)
+                    direction = SwipeDirection.Left;
+                //left
+                else if (deltaX < 0)
+                    direction = SwipeDirection.Right;
+            }
+            //vertical swipe
+            else if (!isHorizontalSwipe && Mathf.Abs(deltaX) <= errorRange)
+            {
+                //up
+                if (deltaY > 0)
+                    direction = SwipeDirection.Down;
+                //down
+                else if (deltaY < 0)
+                    direction = SwipeDirection.Up;
+            }
+            //diagonal swipe
+            else
+            {
+                swiping = false;
+            }
+        }
+
 
         private IEnumerator AddMap(Place place)
         {
@@ -289,7 +372,7 @@ namespace Esri.APP {
                 tile.tag = "Tile";
                 tile.name = children[Array.IndexOf(textures, texture)].Zoom + "/" + children[Array.IndexOf(textures, texture)].X + "/" + children[Array.IndexOf(textures, texture)].Y;
 
-                tile.transform.position = new Vector3(position.x - (i % 4) * 10, position.y, position.z + (i / 4 + 1) * 10);
+                tile.transform.position = new Vector3(position.x - (i % 4) * 10 + 15, position.y, position.z + (i / 4 + 1) * 10 - 25);
                 i++;
                 MeshFilter mf = tile.gameObject.AddComponent<MeshFilter>();
                 GameObject go = GameObject.CreatePrimitive(PrimitiveType.Plane);
@@ -346,7 +429,6 @@ namespace Esri.APP {
             }
         }
 
-
         private IEnumerator CheckExistmap(string url)
         {
             url += "?action=maploaded";
@@ -366,9 +448,24 @@ namespace Esri.APP {
                 }
             }
         }
-
-
         
+        public void OnClickChangeView(string viewType)
+        {
+            this.currentView = viewType;
+        }
+
+        public void OnChangeDimension(string dimension)
+        {
+            this.currentDimension = dimension;          
+        }
+
+        public void OnChangeMapstyle(string mapstyle)
+        {
+            this.currentStyle = mapstyle;
+            this.StartCoroutine(this.AddMap(this._place));
+
+        }
+
         public void OnClickZoomOut()
         {
             // 缩小 - 图标
@@ -383,11 +480,7 @@ namespace Esri.APP {
             this.StartCoroutine(this.AddMap(this._place));
         }
 
-        public void OnClickMoveConfirm(Vector3 position)
-        {
-            this.StartCoroutine(this.ChangeMapCoordinates(position - new Vector3(0f, 0.2f, 0f)));
-        }
-
+        
         public void OnClickMoveLeft()
         {
             this._place = GetLocalTileCenterCoordintes("left");
@@ -433,18 +526,13 @@ namespace Esri.APP {
             this.StartCoroutine(this.AddMap(this._place));
         }
 
-        public void OnChangeDimension(string dimension)
+       
+
+        public void OnClickMoveConfirm(Vector3 position)
         {
-            currentDimension = dimension;
-            this.StartCoroutine(this.AddMap(this._place));
+            this.StartCoroutine(this.ChangeMapCoordinates(position - new Vector3(0f, 0.2f, 0f)));
         }
 
-        public void OnChangeMapstyle(string mapstyle)
-        {
-            currentStyle = mapstyle;
-            this.StartCoroutine(this.AddMap(this._place));
-        }
- 
         private Place GetLocalTileCenterCoordintes(string direction)
         {
             var tileUL = this._place.Location.ToTile(this._place.Level);
@@ -502,35 +590,6 @@ namespace Esri.APP {
             this._place.Location = coordCN;
             return this._place;
 
-        }
-
-        public Coordinate GetCoordinateFromPosition(Vector3 position)
-        {
-            // Get UL and LR coordinates
-            var tileUL = this._place.Location.ToTile(this._place.Level);
-            var tileLR = new Tile()
-            {
-                Zoom = tileUL.Zoom,
-                X = tileUL.X + CHILDREN_LEVEL * 2,
-                Y = tileUL.Y + CHILDREN_LEVEL * 2
-            };
-            var coordUL = tileUL.UpperLeft(CHILDREN_LEVEL);
-            var coordLR = tileLR.UpperLeft(CHILDREN_LEVEL);
-
-            // Get tapped location relative to lower left.
-            GameObject terrain = GameObject.Find("terrain");
-            var location = position - terrain.transform.position;
-
-            var longitude = coordUL.Longitude + (coordLR.Longitude - coordUL.Longitude) * (location.x / SIZE);
-            var lattitude = coordLR.Latitude + (coordUL.Latitude - coordLR.Latitude) * (location.z / SIZE);
-
-            var coordinate = new Coordinate()
-            {
-                Longitude = longitude,
-                Latitude = lattitude
-            };
-
-            return coordinate;
         }
 
         private IEnumerator ChangeMapCoordinates(Vector3 position)
