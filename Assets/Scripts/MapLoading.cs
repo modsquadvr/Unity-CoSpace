@@ -24,7 +24,10 @@ using UnityEngine.Networking;
 using Esri.PrototypeLab.HoloLens.Unity;
 using UnityEngine.UI;
 using UnityEngine.Windows.Speech;
-using SimpleJSON;
+using UnityEngine.SceneManagement;
+using System.IO;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Esri.APP {
     public class MapLoading : MonoBehaviour
@@ -51,23 +54,21 @@ namespace Esri.APP {
         public float orthoZoomSpeed = 0.5f;
         public Camera mainCamera;
 
-
-
         public bool swiping;
         public float minSwipeDistance;
         public float errorRange = 5f;
         public SwipeDirection direction = SwipeDirection.None;
         public enum SwipeDirection { Right, Left, Up, Down, None }
         private Touch initialTouch;
+        private readonly string gameDataFileName = "tasks.json";
 
         public void Start()
         {
             m_datetime = DateTime.Now;
             currentDimension = "2D";
 
-            // Create terrain footprint.
-
-            StartCoroutine(DownloadPlaces(queryURL));
+            //StartCoroutine(DownloadPlaces(queryURL));
+            DownloadPlaces();
 
         }
 
@@ -79,7 +80,8 @@ namespace Esri.APP {
             float tsf = float.Parse(ts.TotalSeconds.ToString());
             if (tsf > 3)
             {
-                StartCoroutine(CheckExistmap(queryURL));
+                //StartCoroutine(CheckExistmap(queryURL));
+                CheckExistmap();
                 m_datetime = DateTime.Now;
             }
 
@@ -119,112 +121,136 @@ namespace Esri.APP {
                 }
             }
 
-
-            if (Input.GetAxis("Mouse ScrollWheel") > 0 && !_isBuildingMap)
+            
+            if (!DetectTouchOnOtherObject())
             {
-                _isBuildingMap = true;
-                Debug.Log(Input.GetAxis("Mouse ScrollWheel").ToString());
-                OnClickZoomIn();
-            }
-            //Zoom in
-            if (Input.GetAxis("Mouse ScrollWheel") < 0 && !_isBuildingMap)
-            {
-                _isBuildingMap = true;
-                Debug.Log(Input.GetAxis("Mouse ScrollWheel").ToString());
-                OnClickZoomOut();
-            }
+                float pinchAmount = 0;
+                Quaternion desiredRotation = mainCamera.transform.rotation;
 
-            float pinchAmount = 0;
-            Quaternion desiredRotation = mainCamera.transform.rotation;
+                DetectTouchMovement.Calculate();
 
-            DetectTouchMovement.Calculate();
-
-            if (Mathf.Abs(DetectTouchMovement.pinchDistanceDelta) > 0)
+                if (Mathf.Abs(DetectTouchMovement.pinchDistanceDelta) > 0)
                 { // zoom
                     pinchAmount = DetectTouchMovement.pinchDistanceDelta;
                 }
 
-            if (Mathf.Abs(DetectTouchMovement.turnAngleDelta) > 0)
+                if (Mathf.Abs(DetectTouchMovement.turnAngleDelta) > 0)
                 { // rotate
                     Vector3 rotationDeg;
-                    rotationDeg = Vector3.forward;                      
+                    rotationDeg = Vector3.forward;
                     rotationDeg.z = -DetectTouchMovement.turnAngleDelta;
                     desiredRotation *= Quaternion.Euler(rotationDeg);
                 }
-            if (currentView == "scene")
-            {
-                if (mainCamera.orthographic)
-                    {
-                        // ... change the orthographic size based on the change in distance between the touches.
-                        mainCamera.orthographicSize += -pinchAmount * orthoZoomSpeed;
 
-                        // Make sure the orthographic size never drops below zero.
-                        mainCamera.orthographicSize = Mathf.Max(mainCamera.orthographicSize, 0.1f);
+                if (currentView == "scene")
+                {
+
+                    if (currentDimension == "3D")
+                    {
+                        if (mainCamera.orthographic)
+                        {
+                            // ... change the orthographic size based on the change in distance between the touches.
+                            mainCamera.orthographicSize += -pinchAmount * orthoZoomSpeed;
+
+                            // Make sure the orthographic size never drops below zero.
+                            mainCamera.orthographicSize = Mathf.Max(mainCamera.orthographicSize, 0.1f);
+                        }
+                        else
+                        {
+                            // Otherwise change the field of view based on the change in distance between the touches.
+                            mainCamera.fieldOfView += -pinchAmount * perspectiveZoomSpeed;
+
+                            // Clamp the field of view to make sure it's between 0 and 180.
+                            mainCamera.fieldOfView = Mathf.Clamp(mainCamera.fieldOfView, 30f, 130f);
+                        }
+                            mainCamera.transform.RotateAround(Vector3.zero, Vector3.up, DetectTouchMovement.turnAngleDelta);
                     }
                     else
                     {
-                        // Otherwise change the field of view based on the change in distance between the touches.
-                        mainCamera.fieldOfView += -pinchAmount * perspectiveZoomSpeed;
-
-                        // Clamp the field of view to make sure it's between 0 and 180.
-                        mainCamera.fieldOfView = Mathf.Clamp(mainCamera.fieldOfView, 0.1f, 179.9f);
+                        mainCamera.fieldOfView =35f;
                     }
-            }
-            else
-            {               
+                        
 
-                if (pinchAmount > 0 && !_isBuildingMap)
-                {
-                    _isBuildingMap = true;
-                    Debug.Log(pinchAmount);
-                    OnClickZoomIn();
+
                 }
-                //Zoom in
-                if (pinchAmount < 0 && !_isBuildingMap)
+                else
                 {
-                    _isBuildingMap = true;
-                    Debug.Log(pinchAmount);
-                    OnClickZoomOut();
+                    if (pinchAmount > 0 && !_isBuildingMap)
+                    {
+                        _isBuildingMap = true;
+                        //Debug.Log(pinchAmount);
+                        OnClickZoomIn();
+                    }
+                    //Zoom in
+                    if (pinchAmount < 0 && !_isBuildingMap)
+                    {
+                        _isBuildingMap = true;
+                        //Debug.Log(pinchAmount);
+                        OnClickZoomOut();
+                    }
+
+                    switch (direction)
+                    {
+                        case SwipeDirection.Left:
+                            if (!_isBuildingMap)
+                            {
+                                _isBuildingMap = true;
+                                OnClickMoveLeft();
+                            }
+                            break;
+                        case SwipeDirection.Right:
+                            if (!_isBuildingMap)
+                            {
+                                _isBuildingMap = true;
+                                OnClickMoveRight();
+                            }
+                            break;
+                        case SwipeDirection.Up:
+                            if (!_isBuildingMap)
+                            {
+                                _isBuildingMap = true;
+                                OnClickMoveUp();
+                            }
+                            break;
+                        case SwipeDirection.Down:
+                            if (!_isBuildingMap)
+                            {
+                                _isBuildingMap = true;
+                                OnClickMoveDown();
+                            }
+                            break;
+                    }
+
                 }
+
+
             }
 
-            if (currentDimension == "2D")
-                mainCamera.transform.rotation = desiredRotation;
-            else
-                mainCamera.transform.RotateAround(Vector3.zero, Vector3.up, DetectTouchMovement.turnAngleDelta);
+        }
 
-            switch(direction)
+        public bool DetectTouchOnOtherObject()
+        {
+            if (Input.touchCount > 0)
             {
-                case SwipeDirection.Left:
-                    if (!_isBuildingMap)
+                for (int i = 0; i < Input.touchCount; i++)
+                {
+                    Touch touch = Input.touches[i];
+
+                    //Debug.Log(i.ToString() + ":" + touch.phase.ToString());
+
+                    Ray ray = Camera.main.ScreenPointToRay(touch.position);
+                    RaycastHit hitInfo;
+
+                    if (Physics.Raycast(ray, out hitInfo))
                     {
-                        _isBuildingMap = true;
-                        OnClickMoveLeft();
+                        return true;
+ 
                     }
-                    break;
-                case SwipeDirection.Right:
-                    if (!_isBuildingMap)
-                    {
-                        _isBuildingMap = true;
-                        OnClickMoveRight();
-                    }
-                    break;
-                case SwipeDirection.Up:
-                    if (!_isBuildingMap)
-                    {
-                        _isBuildingMap = true;
-                        OnClickMoveUp();
-                    }
-                    break;
-                case SwipeDirection.Down:
-                    if (!_isBuildingMap)
-                    {
-                        _isBuildingMap = true;
-                        OnClickMoveDown();
-                    }
-                    break;
-            }           
-           
+
+                }
+            }
+
+            return false;
         }
 
         public void DetectonMoveDirection()
@@ -428,9 +454,49 @@ namespace Esri.APP {
                 this._isMapLoaded = true;
             }
         }
+        
+        private void DownloadPlaces()
+        {
+            string filePath = Path.Combine(Application.streamingAssetsPath, gameDataFileName);
+            int i = 0;
 
+            if (File.Exists(filePath))
+            {
+                // Read the json from the file into a string
+                string dataAsJson = File.ReadAllText(filePath);
+                // Pass the json to JsonUtility, and tell it to create a GameData object from it
+
+                JObject obj = JObject.Parse(dataAsJson);
+
+                JArray tasks = (JArray)obj["Tasks"];
+
+                
+                this.places = new Place[tasks.Count];
+
+                foreach (var task in tasks)
+                {
+                        places[i] = new Place();
+                        places[i].Name = task["Name"].ToString();
+                        places[i].Location = new Coordinate();
+                        string log = task["coordinates"]["Longitude"].ToString();
+                        places[i].Location.Longitude = float.Parse(task["coordinates"]["Longitude"].ToString());
+                        places[i].Location.Latitude = float.Parse(task["coordinates"]["Latitude"].ToString());
+                        places[i].Level = int.Parse(task["Level"].ToString());
+                        i++;
+                }
+
+                this._isMapLoaded = true;
+            }            
+            else
+            {
+                Debug.LogError("Cannot load task data!");
+            }
+        }
+        
         private IEnumerator CheckExistmap(string url)
         {
+
+            
             url += "?action=maploaded";
             UnityWebRequest hs_get = UnityWebRequest.Get(url);
             yield return hs_get.SendWebRequest();
@@ -447,8 +513,36 @@ namespace Esri.APP {
                     reloadmapname = xml;
                 }
             }
+
+
         }
-        
+
+        private void CheckExistmap()
+        {
+            string filePath = Path.Combine(Application.streamingAssetsPath, gameDataFileName);
+
+            if (File.Exists(filePath))
+            {
+                // Read the json from the file into a string
+                string dataAsJson = File.ReadAllText(filePath);
+                // Pass the json to JsonUtility, and tell it to create a GameData object from it
+
+                JObject obj = JObject.Parse(dataAsJson);
+                // Retrieve the allRoundData property of loadedData
+                reloadmapname = obj["loadedmap"].ToString();
+                if (reloadmapname != mapName)
+                {
+                    _NeedReloadMap = true;
+                }
+                
+            }
+            else
+            {
+                Debug.LogError("Cannot load task data!");
+            }
+        }
+
+
         public void OnClickChangeView(string viewType)
         {
             this.currentView = viewType;
@@ -526,7 +620,15 @@ namespace Esri.APP {
             this.StartCoroutine(this.AddMap(this._place));
         }
 
-       
+        public void OnClickMaintain()
+        {
+            SceneManager.LoadScene(1);
+        }
+
+        public void OnClickExit()
+        {
+            Application.Quit();
+        }
 
         public void OnClickMoveConfirm(Vector3 position)
         {

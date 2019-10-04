@@ -245,14 +245,8 @@
     <Reference Include="UnityEngine.SpatialTracking">
       <HintPath>C:/Program Files/Unity/Hub/Editor/2018.4.8f1/Editor/Data/UnityExtensions/Unity/UnitySpatialTracking/RuntimeEditor/UnityEngine.SpatialTracking.dll</HintPath>
     </Reference>
-    <Reference Include="Unity.Analytics.Editor">
-      <HintPath>C:/Users/xixih/Documents/Nathan Sun/ESRI-Mitac/Library/PackageCache/com.unity.analytics@3.2.2/Unity.Analytics.Editor.dll</HintPath>
-    </Reference>
-    <Reference Include="Unity.Analytics.StandardEvents">
-      <HintPath>C:/Users/xixih/Documents/Nathan Sun/ESRI-Mitac/Library/PackageCache/com.unity.analytics@3.2.2/Unity.Analytics.StandardEvents.dll</HintPath>
-    </Reference>
-    <Reference Include="Unity.Analytics.Tracker">
-      <HintPath>C:/Users/xixih/Documents/Nathan Sun/ESRI-Mitac/Library/PackageCache/com.unity.analytics@3.2.2/Unity.Analytics.Tracker.dll</HintPath>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>Assets/Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib">
       <HintPath>C:\Program Files\Unity\Hub\Editor\2018.4.8f1\Editor\Data\MonoBleedingEdge\lib\mono\2.0-api\mscorlib.dll</HintPath>
@@ -283,50 +277,49 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="Unity.TextMeshPro.Editor.csproj">
-      <Project>{3A848AB7-9891-EDDA-D555-BF184C2F81F4}</Project>
-      <Name>Unity.TextMeshPro.Editor</Name>
-    </ProjectReference>
     <ProjectReference Include="Unity.PackageManagerUI.Editor.csproj">
       <Project>{6877705C-FBD9-0C4F-5AFB-6FB431E5D39D}</Project>
       <Name>Unity.PackageManagerUI.Editor</Name>
-    </ProjectReference>
-    <ProjectReference Include="Unity.CollabProxy.Editor.csproj">
-      <Project>{C12CEEC6-100C-58A2-DE36-314E4DE5E40B}</Project>
-      <Name>Unity.CollabProxy.Editor</Name>
-    </ProjectReference>
-    <ProjectReference Include="Unity.TextMeshPro.csproj">
-      <Project>{07A21C90-D344-AE1A-8456-9910C203B41A}</Project>
-      <Name>Unity.TextMeshPro</Name>
-    </ProjectReference>
-    <ProjectReference Include="Unity.Analytics.DataPrivacy.csproj">
-      <Project>{D6E266C6-3D1F-28C8-9FEB-2A01E44DBF77}</Project>
-      <Name>Unity.Analytics.DataPrivacy</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\EsriPrototypeLab\Scripts\Coordinate.cs" />
     <Compile Include="Assets\EsriPrototypeLab\Scripts\Extensions.cs" />
     <Compile Include="Assets\EsriPrototypeLab\Scripts\Imagery.cs" />
-    <Compile Include="Assets\EsriPrototypeLab\Scripts\LercDecoder.cs" />
     <Compile Include="Assets\EsriPrototypeLab\Scripts\Place.cs" />
     <Compile Include="Assets\EsriPrototypeLab\Scripts\SimpleJSON.cs" />
+    <Compile Include="Assets\EsriPrototypeLab\Scripts\Tasks.cs" />
     <Compile Include="Assets\EsriPrototypeLab\Scripts\Tile.cs" />
-    <Compile Include="Assets\Scripts\MapControl.cs" />
+    <Compile Include="Assets\Scripts\ButtonChangeView.cs" />
+    <Compile Include="Assets\Scripts\ButtonDimension.cs" />
+    <Compile Include="Assets\Scripts\ButtonMapstyle.cs" />
+    <Compile Include="Assets\Scripts\CaseCommand.cs" />
+    <Compile Include="Assets\Scripts\CaseControl.cs" />
+    <Compile Include="Assets\Scripts\CaseResponse.cs" />
+    <Compile Include="Assets\Scripts\DetectClosestTouchMovement.cs" />
+    <Compile Include="Assets\Scripts\DetectTouchMovement.cs" />
+    <Compile Include="Assets\Scripts\ElementDBConnector.cs" />
+    <Compile Include="Assets\Scripts\GetCases.cs" />
+    <Compile Include="Assets\Scripts\LightFollowing.cs" />
+    <Compile Include="Assets\Scripts\MapLoading.cs" />
+    <Compile Include="Assets\Scripts\TablePlus.Common.Base\Misc.cs" />
+    <Compile Include="Assets\Scripts\TablePlus.Common.Base\Serialization.cs" />
+    <Compile Include="Assets\Scripts\TablePlus.Common.Base\WebHelper.cs" />
+    <Compile Include="Assets\Scripts\TablePlus.ElementsDB.DBBridge\DBCase.cs" />
+    <Compile Include="Assets\Scripts\TablePlus.ElementsDB.DBBridge\DBCaseSet.cs" />
+    <Compile Include="Assets\Scripts\TablePlus.ElementsDB.DBBridge\DBObject.cs" />
+    <Compile Include="Assets\Scripts\TablePlus.ElementsDB.DBBridge\Elements.cs" />
+    <Compile Include="Assets\Scripts\TablePlus.ElementsDB.DBBridge\Extra\ResourceHandler.cs" />
+    <Compile Include="Assets\Scripts\TablePlus.ElementsDB.DBBridge\Extra\ResourceHandlers\BaseResourceHandler.cs" />
+    <Compile Include="Assets\Scripts\TablePlus.ElementsDB.DBBridge\Extra\ResourceHandlers\DaeGenerator.cs" />
+    <Compile Include="Assets\Scripts\TablePlus.ElementsDB.DBBridge\Extra\ResourceHandlers\ScriptedHandler.cs" />
+    <Compile Include="Assets\Scripts\TablePlus.ElementsDB.DBBridge\Extra\ResourceHandlers\StaticResourceHandler.cs" />
+    <Compile Include="Assets\Scripts\TablePlus.ElementsDB.DBBridge\Extra\ResourceInfoList.cs" />
+    <Compile Include="Assets\Scripts\UI2DanchoredPosition.cs" />
+    <Compile Include="Assets\Scripts\ViewChanging.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Assets\Materials\EyeEffectShader.shader" />
-    <None Include="Assets\Shaders\BlueLinesOnWalls.shader" />
-    <None Include="Assets\Shaders\OcclusionGrid.shader" />
-    <None Include="Assets\Shaders\OccusionRim.shader" />
-    <None Include="Packages\com.unity.analytics\DataPrivacy\Unity.Analytics.DataPrivacy.asmdef" />
-    <None Include="Packages\com.unity.analytics\Tests\Editor\Unity.Analytics.StandardEvents\Unity.Analytics.StandardEvents.EditorTests.asmdef" />
-    <None Include="Packages\com.unity.analytics\Tests\Runtime\DataPrivacy\Unity.Analytics.DataPrivacy.Tests.asmdef" />
-    <None Include="Packages\com.unity.collab-proxy\Editor\Resources\Styles\CollabHistoryCommon.uss" />
-    <None Include="Packages\com.unity.collab-proxy\Editor\Resources\Styles\CollabHistoryDark.uss" />
-    <None Include="Packages\com.unity.collab-proxy\Editor\Resources\Styles\CollabHistoryLight.uss" />
-    <None Include="Packages\com.unity.collab-proxy\Editor\Unity.CollabProxy.Editor.asmdef" />
-    <None Include="Packages\com.unity.collab-proxy\Tests\Editor\Unity.CollabProxy.EditorTests.asmdef" />
+    <None Include="Assets\Tasks.txt" />
     <None Include="Packages\com.unity.package-manager-ui\Editor\Resources\Styles\Main_Dark.uss" />
     <None Include="Packages\com.unity.package-manager-ui\Editor\Resources\Styles\Main_Light.uss" />
     <None Include="Packages\com.unity.package-manager-ui\Editor\Resources\Templates\Alert.uxml" />
@@ -341,12 +334,6 @@
     <None Include="Packages\com.unity.package-manager-ui\Editor\Resources\Templates\PackageStatusBar.uxml" />
     <None Include="Packages\com.unity.package-manager-ui\Editor\Unity.PackageManagerUI.Editor.asmdef" />
     <None Include="Packages\com.unity.package-manager-ui\Tests\Editor\Unity.PackageManagerUI.EditorTests.asmdef" />
-    <None Include="Packages\com.unity.textmeshpro\Editor Resources\Shaders\TMP_Properties.cginc" />
-    <None Include="Packages\com.unity.textmeshpro\Editor Resources\Shaders\TMP_SDF Internal SSD.shader" />
-    <None Include="Packages\com.unity.textmeshpro\Scripts\Editor\Unity.TextMeshPro.Editor.asmdef" />
-    <None Include="Packages\com.unity.textmeshpro\Scripts\Runtime\Unity.TextMeshPro.asmdef" />
-    <None Include="Packages\com.unity.textmeshpro\Tests\Editor\Unity.TextMeshPro.Editor.Tests.asmdef" />
-    <None Include="Packages\com.unity.textmeshpro\Tests\Runtime\Unity.TextMeshPro.Tests.asmdef" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="GenerateTargetFrameworkMonikerAttribute" />

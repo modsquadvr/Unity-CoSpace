@@ -8,3 +8,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/ESRI MAP.unity
     guid: 74483c4ee71267942978b13c9e8dcffc
+  - enabled: 0
+    path: Assets/Scenes/ElementDB Connector.unity
+    guid: a220b61a751591b4e9a965578671f2ac
+  m_configObjects: {}
