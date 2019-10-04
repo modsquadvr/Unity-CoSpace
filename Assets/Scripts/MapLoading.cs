@@ -38,7 +38,7 @@ namespace Esri.APP {
         private bool _NeedReloadMap = false;
         private bool _isBuildingMap = false;
         public Place _place;
-        private Place[] places;      
+        private Place[] places;
         private readonly string queryURL = "http://127.0.0.1:8080/querydata.php";
         private string mapName;
         private string reloadmapname;
@@ -66,6 +66,9 @@ namespace Esri.APP {
         {
             m_datetime = DateTime.Now;
             currentDimension = "2D";
+#if UNITY_WSA  && !UNITY_EDITOR
+            WriteConfigrationToStorage();
+#endif
 
             //StartCoroutine(DownloadPlaces(queryURL));
             DownloadPlaces();
@@ -93,20 +96,20 @@ namespace Esri.APP {
         {
             if (this._isMapLoaded && this._isFirstTimeLoading)
             {
-                    for (int i = 0; i < places.Length; i++)
+                for (int i = 0; i < places.Length; i++)
+                {
+                    if (places[i].Name == "Default")
                     {
-                        if (places[i].Name == "Default")
-                        {
-                            mapName = places[i].Name;
-                            this._place = places[i];
-                            this.StartCoroutine(this.AddMap(places[i]));
-                        }
+                        mapName = places[i].Name;
+                        this._place = places[i];
+                        this.StartCoroutine(this.AddMap(places[i]));
                     }
+                }
 
                 this._isFirstTimeLoading = false;
 
             }
-        
+
             //add 1
             if (this._NeedReloadMap && !this._isFirstTimeLoading)
             {
@@ -121,7 +124,7 @@ namespace Esri.APP {
                 }
             }
 
-            
+
             if (!DetectTouchOnOtherObject())
             {
                 float pinchAmount = 0;
@@ -163,13 +166,13 @@ namespace Esri.APP {
                             // Clamp the field of view to make sure it's between 0 and 180.
                             mainCamera.fieldOfView = Mathf.Clamp(mainCamera.fieldOfView, 30f, 130f);
                         }
-                            mainCamera.transform.RotateAround(Vector3.zero, Vector3.up, DetectTouchMovement.turnAngleDelta);
+                        mainCamera.transform.RotateAround(Vector3.zero, Vector3.up, DetectTouchMovement.turnAngleDelta);
                     }
                     else
                     {
-                        mainCamera.fieldOfView =35f;
+                        mainCamera.fieldOfView = 35f;
                     }
-                        
+
 
 
                 }
@@ -244,7 +247,7 @@ namespace Esri.APP {
                     if (Physics.Raycast(ray, out hitInfo))
                     {
                         return true;
- 
+
                     }
 
                 }
@@ -342,7 +345,7 @@ namespace Esri.APP {
 
             // Elevation and texture variables.
             Texture2D[] textures = new Texture2D[children.Length];
-            
+
             yield return null;
 
             // Retrieve imagery.
@@ -372,7 +375,7 @@ namespace Esri.APP {
                     foreach (GameObject tc in tcs)
                     {
                         GameObject.Destroy(tc);
-                    } 
+                    }
                 }
                 else
                 {
@@ -405,7 +408,7 @@ namespace Esri.APP {
                 mf.mesh = go.GetComponent<MeshFilter>().mesh;
                 Destroy(go);
                 MeshRenderer rd = tile.gameObject.AddComponent<MeshRenderer>();
-                rd.material.mainTexture = texture;                              
+                rd.material.mainTexture = texture;
                 yield return null;
             }
 
@@ -431,33 +434,43 @@ namespace Esri.APP {
                 xml = hs_get.downloadHandler.text;
                 if (!xml.Equals(m_xml) || (m_xml.Equals("initial")))
                 {
-                        m_xml = xml;
-                        string[] maps = xml.Split('\n');
-                        this.places = new Place[maps.Length - 1];
+                    m_xml = xml;
+                    string[] maps = xml.Split('\n');
+                    this.places = new Place[maps.Length - 1];
 
-                        foreach (string map in maps)
+                    foreach (string map in maps)
+                    {
+                        if (map.Length > 0)
                         {
-                            if (map.Length > 0)
-                            {
-                                string[] mapinfo = map.Split('\t');
-                                places[i] = new Place();
-                                places[i].Name = mapinfo[0];
-                                places[i].Location = new Coordinate();
-                                places[i].Location.Longitude = float.Parse(mapinfo[1]);
-                                places[i].Location.Latitude = float.Parse(mapinfo[2]);
-                                places[i].Level = int.Parse(mapinfo[3]);
-                                i++;
+                            string[] mapinfo = map.Split('\t');
+                            places[i] = new Place();
+                            places[i].Name = mapinfo[0];
+                            places[i].Location = new Coordinate();
+                            places[i].Location.Longitude = float.Parse(mapinfo[1]);
+                            places[i].Location.Latitude = float.Parse(mapinfo[2]);
+                            places[i].Level = int.Parse(mapinfo[3]);
+                            i++;
 
-                            }
                         }
+                    }
                 }
                 this._isMapLoaded = true;
             }
         }
-        
-        private void DownloadPlaces()
+
+        private async void DownloadPlaces()
         {
+#if UNITY_WSA && !UNITY_EDITOR
+            Windows.Storage.StorageFolder storageFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
+                Windows.Storage.StorageFile file = await storageFolder.CreateFileAsync(gameDataFileName,
+                        Windows.Storage.CreationCollisionOption.OpenIfExists);
+        string filePath = file.Path;
+#else
             string filePath = Path.Combine(Application.streamingAssetsPath, gameDataFileName);
+#endif
+
+
+            //string filePath = Path.Combine(Application.streamingAssetsPath, gameDataFileName);
             int i = 0;
 
             if (File.Exists(filePath))
@@ -470,33 +483,33 @@ namespace Esri.APP {
 
                 JArray tasks = (JArray)obj["Tasks"];
 
-                
+
                 this.places = new Place[tasks.Count];
 
                 foreach (var task in tasks)
                 {
-                        places[i] = new Place();
-                        places[i].Name = task["Name"].ToString();
-                        places[i].Location = new Coordinate();
-                        string log = task["coordinates"]["Longitude"].ToString();
-                        places[i].Location.Longitude = float.Parse(task["coordinates"]["Longitude"].ToString());
-                        places[i].Location.Latitude = float.Parse(task["coordinates"]["Latitude"].ToString());
-                        places[i].Level = int.Parse(task["Level"].ToString());
-                        i++;
+                    places[i] = new Place();
+                    places[i].Name = task["Name"].ToString();
+                    places[i].Location = new Coordinate();
+                    string log = task["coordinates"]["Longitude"].ToString();
+                    places[i].Location.Longitude = float.Parse(task["coordinates"]["Longitude"].ToString());
+                    places[i].Location.Latitude = float.Parse(task["coordinates"]["Latitude"].ToString());
+                    places[i].Level = int.Parse(task["Level"].ToString());
+                    i++;
                 }
 
                 this._isMapLoaded = true;
-            }            
+            }
             else
             {
                 Debug.LogError("Cannot load task data!");
             }
         }
-        
+
         private IEnumerator CheckExistmap(string url)
         {
 
-            
+
             url += "?action=maploaded";
             UnityWebRequest hs_get = UnityWebRequest.Get(url);
             yield return hs_get.SendWebRequest();
@@ -517,9 +530,18 @@ namespace Esri.APP {
 
         }
 
-        private void CheckExistmap()
+        private async void CheckExistmap()
         {
+#if UNITY_WSA && !UNITY_EDITOR
+            Windows.Storage.StorageFolder storageFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
+                Windows.Storage.StorageFile file = await storageFolder.CreateFileAsync(gameDataFileName,
+                        Windows.Storage.CreationCollisionOption.OpenIfExists);
+        string filePath = file.Path;
+#else
             string filePath = Path.Combine(Application.streamingAssetsPath, gameDataFileName);
+#endif
+
+            //string filePath = Path.Combine(Application.streamingAssetsPath, gameDataFileName);
 
             if (File.Exists(filePath))
             {
@@ -534,7 +556,7 @@ namespace Esri.APP {
                 {
                     _NeedReloadMap = true;
                 }
-                
+
             }
             else
             {
@@ -550,7 +572,7 @@ namespace Esri.APP {
 
         public void OnChangeDimension(string dimension)
         {
-            this.currentDimension = dimension;          
+            this.currentDimension = dimension;
         }
 
         public void OnChangeMapstyle(string mapstyle)
@@ -564,7 +586,7 @@ namespace Esri.APP {
         {
             // 缩小 - 图标
             this._place.Level -= 1;
-            this.StartCoroutine(this.AddMap(this._place)); 
+            this.StartCoroutine(this.AddMap(this._place));
         }
 
         public void OnClickZoomIn()
@@ -574,7 +596,7 @@ namespace Esri.APP {
             this.StartCoroutine(this.AddMap(this._place));
         }
 
-        
+
         public void OnClickMoveLeft()
         {
             this._place = GetLocalTileCenterCoordintes("left");
@@ -593,7 +615,7 @@ namespace Esri.APP {
             this.StartCoroutine(this.AddMap(this._place));
         }
 
-        public void OnClickMoveDown()        
+        public void OnClickMoveDown()
         {
             this._place = GetLocalTileCenterCoordintes("down");
             this.StartCoroutine(this.AddMap(this._place));
@@ -625,10 +647,41 @@ namespace Esri.APP {
             SceneManager.LoadScene(1);
         }
 
-        public void OnClickExit()
+        public async void OnClickExit()
         {
-            Application.Quit();
-        }
+            /*
+#if UNITY_WSA && !UNITY_EDITOR
+
+            Windows.Storage.StorageFolder storageFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
+                Windows.Storage.StorageFile file = await storageFolder.CreateFileAsync(gameDataFileName,
+                        Windows.Storage.CreationCollisionOption.OpenIfExists);
+        string filePath = file.Path;
+#else
+            string filePath = Path.Combine(Application.streamingAssetsPath, gameDataFileName);
+#endif
+
+            if (File.Exists(filePath))
+            {
+                // Read the json from the file into a string
+
+                string dataAsJson = File.ReadAllText(filePath);
+                // Pass the json to JsonUtility, and tell it to create a GameData object from it
+                dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject(dataAsJson);
+
+                jsonObj["loadedmap"] = "Default";
+                string output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
+                //File.WriteAllText(filePath, output);
+
+#if UNITY_WSA && !UNITY_EDITOR
+
+                await Windows.Storage.FileIO.WriteTextAsync(file, output);
+#else
+                File.WriteAllText(filePath, output);
+#endif
+*/
+                Application.Quit();
+            }
+
 
         public void OnClickMoveConfirm(Vector3 position)
         {
@@ -725,8 +778,35 @@ namespace Esri.APP {
 
             yield return null;
         }
-        
 
+#if UNITY_WSA && !UNITY_EDITOR
+
+        async void WriteConfigrationToStorage()
+        {
+
+                Windows.Storage.StorageFolder storageFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
+                Windows.Storage.StorageFile file = await storageFolder.CreateFileAsync(gameDataFileName,
+                        Windows.Storage.CreationCollisionOption.OpenIfExists);
+
+                string filePath = Path.Combine(Application.streamingAssetsPath, gameDataFileName);
+
+
+                if (File.Exists(filePath) && File.Exists(file.Path))
+                {
+                    // Read the json from the file into a string
+
+                    string dataAsJson = File.ReadAllText(filePath);
+                    // Pass the json to JsonUtility, and tell it to create a GameData object from it
+                    await Windows.Storage.FileIO.WriteTextAsync(file, dataAsJson);
+
+                }
+                else
+                {
+                    Debug.LogError("Cannot load task data!");
+                }
+        }
+
+#endif
     }
-
+    
 }

@@ -522,7 +522,7 @@ PlayerSettings:
   additionalIl2CppArgs: 
   scriptingRuntimeVersion: 1
   apiCompatibilityLevelPerPlatform:
-    Standalone: 2
+    Standalone: 6
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
   metroPackageName: ESRI
@@ -564,8 +564,8 @@ PlayerSettings:
       InternetClientServer: True
       Location: True
       LowLevelDevices: False
-      Microphone: True
-      MusicLibrary: True
+      Microphone: False
+      MusicLibrary: False
       Objects3D: True
       OfflineMapsManagement: False
       PhoneCall: False
@@ -578,14 +578,14 @@ PlayerSettings:
       RemoteSystem: False
       RemovableStorage: False
       SharedUserCertificates: False
-      SpatialPerception: True
+      SpatialPerception: False
       SystemManagement: False
       UserAccountInformation: False
       UserDataTasks: False
       UserNotificationListener: False
-      VideosLibrary: True
+      VideosLibrary: False
       VoipCall: False
-      WebCam: True
+      WebCam: False
   metroTargetDeviceFamilies:
     Desktop: False
     Holographic: False
@@ -647,7 +647,7 @@ PlayerSettings:
   facebookStatus: 1
   facebookXfbml: 0
   facebookFrictionlessRequests: 1
-  apiCompatibilityLevel: 2
+  apiCompatibilityLevel: 6
   cloudProjectId: 
   framebufferDepthMemorylessMode: 0
   projectName: 

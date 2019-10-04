@@ -78,6 +78,7 @@
     <Compile Include="Assets\Scripts\GetCases.cs" />
     <Compile Include="Assets\Scripts\LightFollowing.cs" />
     <Compile Include="Assets\Scripts\MapLoading.cs" />
+    <Compile Include="Assets\Scripts\TaskOptions.cs" />
     <Compile Include="Assets\Scripts\UI2DanchoredPosition.cs" />
     <Compile Include="Assets\Scripts\ViewChanging.cs" />
     <None Include="Assets\Tasks.txt" />
