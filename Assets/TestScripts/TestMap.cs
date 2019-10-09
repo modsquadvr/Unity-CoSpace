@@ -112,13 +112,6 @@ public class TestMap : MonoBehaviour
 			
 			isPerspectiveView = !isPerspectiveView;
 		}
-        if (Event.current.type == EventType.Repaint)
-        {
-            Rect rect = GUILayoutUtility.GetLastRect();
-            if (rect.Contains(Event.current.mousePosition))
-                pressed = true;
-        }
-
       
         if (Event.current.type == EventType.Repaint)
         {
@@ -134,11 +127,14 @@ public class TestMap : MonoBehaviour
             layerMessage = "\nZoom in!";
         if (GUILayout.Button(((layers != null && currentLayerIndex < layers.Count) ? layers[currentLayerIndex].name + layerMessage : "Layer"), GUILayout.ExpandHeight(true)))
         {
+
+            layers[currentLayerIndex].gameObject.SetActive(false);
             ++currentLayerIndex;
             if (currentLayerIndex >= layers.Count)
             {
                 currentLayerIndex = 0;
             }
+            layers[currentLayerIndex].gameObject.SetActive(true);
 
             map.IsDirty = true;
         }
@@ -148,14 +144,15 @@ public class TestMap : MonoBehaviour
 			map.Zoom(-1.0f);
 			pressed = true;
 		}
+
         if (Event.current.type == EventType.Repaint)
         {
             Rect rect = GUILayoutUtility.GetLastRect();
             if (rect.Contains(Event.current.mousePosition))
                 pressed = true;
         }
-		
-		GUILayout.EndHorizontal();
+
+        GUILayout.EndHorizontal();
 					
 		GUILayout.EndArea();
 
@@ -173,8 +170,8 @@ public class TestMap : MonoBehaviour
         //myZoomButton = GameObject.Find("Button_zoom_+").GetComponent<Button>();
 
         // setup the gui scale according to the screen resolution
-        guiXScale = (Screen.orientation == ScreenOrientation.Landscape ? Screen.width : Screen.height) / 480.0f;
-        guiYScale = (Screen.orientation == ScreenOrientation.Landscape ? Screen.height : Screen.width) / 640.0f;
+        guiXScale = (Screen.orientation == ScreenOrientation.Landscape ? Screen.width : Screen.height) / 960;
+        guiYScale = (Screen.orientation == ScreenOrientation.Landscape ? Screen.height : Screen.width) / 1280;
 		// setup the gui area
 		guiRect = new Rect(16.0f * guiXScale, 4.0f * guiXScale, Screen.width / guiXScale - 32.0f * guiXScale, 32.0f * guiYScale);
 
@@ -185,7 +182,7 @@ public class TestMap : MonoBehaviour
         // **MAY HAVE TO CHANGE THIS TO GET TOUCHSCRIPT WORKING** //
         map.InputDelegate += UnitySlippyMap.Input.MapInput.BasicTouchAndKeyboard;
 
-		map.CurrentZoom = 18.0f;
+		map.CurrentZoom = 10.0f;
 		// UVic
 
 		map.CenterWGS84 = new double[2] { -123.310900, 48.460959 };
@@ -198,10 +195,20 @@ public class TestMap : MonoBehaviour
         layers = new List<LayerBehaviour>();
 
 		// create an Esri tile layer
-        EsriTileLayer esriLayer = map.CreateLayer<EsriTileLayer>("Esri");
-        esriLayer.BaseURL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/";
-		
-        layers.Add(esriLayer);
+
+      
+
+        EsriTileLayer satelliteLayer = map.CreateLayer<EsriTileLayer>("Satellite");
+        satelliteLayer.BaseURL = "http://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/";
+        layers.Add(satelliteLayer);
+
+        EsriTileLayer streetLayer = map.CreateLayer<EsriTileLayer>("Street");
+        streetLayer.BaseURL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/";
+        streetLayer.gameObject.SetActive(false);
+        layers.Add(streetLayer);
+
+        
+        
 
         yield return null;
 	
