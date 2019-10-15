@@ -5,6 +5,8 @@
 using UnityEngine;
 using TouchScript.Gestures.TransformGestures;
 
+
+
 namespace TouchScript.Examples.CameraControl
 {
     /// <exclude />
@@ -14,7 +16,7 @@ namespace TouchScript.Examples.CameraControl
         public ScreenTransformGesture ManipulationGesture;
         public float PanSpeed = 200f;
         public float RotationSpeed = 200f;
-        public float ZoomSpeed = 10f;
+        public float ZoomSpeed = 1f;
 
         private Transform pivot;
         private Transform cam;
@@ -43,6 +45,8 @@ namespace TouchScript.Examples.CameraControl
                 -ManipulationGesture.DeltaPosition.x/Screen.width*RotationSpeed,
                 ManipulationGesture.DeltaRotation);
             pivot.localRotation *= rotation;
+
+
             cam.transform.localPosition += Vector3.forward*(ManipulationGesture.DeltaScale - 1f)*ZoomSpeed;
         }
 

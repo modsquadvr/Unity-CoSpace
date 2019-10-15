@@ -23,6 +23,8 @@
 
 using UnityEngine;
 
+using TouchScript.Gestures.TransformGestures;
+
 using System;
 
 using UnitySlippyMap.Map;
@@ -35,20 +37,30 @@ using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 
+
+
+
+
+
+
 using UnityEngine.UI;
 
 public class TestMap : MonoBehaviour
 {
 
-    //public Button myZoomButton;
+    //pivot GameObject is going to be Esri GameObject
 
-    private MapBehaviour		map;
-	
+    public MapBehaviour		map;
+
+
 	public Texture	LocationTexture;
 	public Texture	MarkerTexture;
 
-	
-	private float	guiXScale;
+
+    public float CameraZoom;
+    private Transform camPivot;
+
+    private float	guiXScale;
 	private float	guiYScale;
 	private Rect	guiRect;
 	
@@ -59,6 +71,20 @@ public class TestMap : MonoBehaviour
 	private float	animationDuration = 0.5f;
 	private float	animationStartTime = 0.0f;
 
+    //Debug variables
+    public int counter;
+    public int mouseCounter;
+
+    //touchscript variables
+    public ScreenTransformGesture TwoFingerMoveGesture;
+    public ScreenTransformGesture ManipulationGesture;
+    public float PanSpeed = 1f;
+    public float RotationSpeed = 200f;
+    public float ZoomSpeed = .25f;
+
+
+    private Transform cam;
+
 
 
     private List<LayerBehaviour> layers;
@@ -68,28 +94,29 @@ public class TestMap : MonoBehaviour
 
 	bool Toolbar(MapBehaviour map)
 	{
-		GUI.matrix = Matrix4x4.Scale(new Vector3(guiXScale, guiXScale, 1.0f));
+		//GUI.matrix = Matrix4x4.Scale(new Vector3(guiXScale, guiXScale, 1.0f));
 		
 		GUILayout.BeginArea(guiRect);
 		
 		GUILayout.BeginHorizontal();
 		
-		GUILayout.Label("Zoom: " + map.CurrentZoom);
+		//GUILayout.Label("Zoom: " + map.CurrentZoom);
 		
 		bool pressed = false;
 
-        /*myZoomButton.onClick.AddListener(ZoomIn);
-        void ZoomIn()
-        {
-            Debug.Log("You clicked Zoom.");
-        }
-        */
 
+
+
+        /*
         if (GUILayout.RepeatButton("+", GUILayout.ExpandHeight(true)))
 		{
 			map.Zoom(1.0f);
 			pressed = true;
 		}
+        */
+
+
+
         if (Event.current.type == EventType.Repaint)
         {
             Rect rect = GUILayoutUtility.GetLastRect();
@@ -112,6 +139,13 @@ public class TestMap : MonoBehaviour
 			
 			isPerspectiveView = !isPerspectiveView;
 		}
+        if (Event.current.type == EventType.Repaint)
+        {
+            Rect rect = GUILayoutUtility.GetLastRect();
+            if (rect.Contains(Event.current.mousePosition))
+                pressed = true;
+        }
+
       
         if (Event.current.type == EventType.Repaint)
         {
@@ -127,32 +161,30 @@ public class TestMap : MonoBehaviour
             layerMessage = "\nZoom in!";
         if (GUILayout.Button(((layers != null && currentLayerIndex < layers.Count) ? layers[currentLayerIndex].name + layerMessage : "Layer"), GUILayout.ExpandHeight(true)))
         {
-
-            layers[currentLayerIndex].gameObject.SetActive(false);
             ++currentLayerIndex;
             if (currentLayerIndex >= layers.Count)
             {
                 currentLayerIndex = 0;
             }
-            layers[currentLayerIndex].gameObject.SetActive(true);
 
             map.IsDirty = true;
         }
 
+        /*
         if (GUILayout.RepeatButton("-", GUILayout.ExpandHeight(true)))
 		{
 			map.Zoom(-1.0f);
 			pressed = true;
 		}
-
+        */
         if (Event.current.type == EventType.Repaint)
         {
             Rect rect = GUILayoutUtility.GetLastRect();
             if (rect.Contains(Event.current.mousePosition))
                 pressed = true;
         }
-
-        GUILayout.EndHorizontal();
+		
+		GUILayout.EndHorizontal();
 					
 		GUILayout.EndArea();
 
@@ -163,26 +195,88 @@ public class TestMap : MonoBehaviour
 		return pressed;
 
 	}
-	
-	private IEnumerator Start()
-	{
 
-        //myZoomButton = GameObject.Find("Button_zoom_+").GetComponent<Button>();
+    private void Awake()
+    {
+        cam = GameObject.Find("Camera").transform;
+        //camPivot = transform.Find("Camera");
+    }
+
+    private void OnEnable()
+    {
+        TwoFingerMoveGesture.Transformed += twoFingerTransformHandler;
+        ManipulationGesture.Transformed += manipulationTransformedHandler;
+    }
+
+    private void OnDisable()
+    {
+        TwoFingerMoveGesture.Transformed -= twoFingerTransformHandler;
+        ManipulationGesture.Transformed -= manipulationTransformedHandler;
+
+
+    }
+
+    private void twoFingerTransformHandler(object sender, System.EventArgs e)
+    {
+        cam.localPosition -= cam.rotation * TwoFingerMoveGesture.DeltaPosition * PanSpeed;
+    
+       
+        counter++;
+        Debug.Log("Transformation # " + counter);
+
+    }
+
+
+    public void manipulationTransformedHandler(object sender, System.EventArgs e)
+    {
+
+        cam.transform.localPosition -= Vector3.up * (ManipulationGesture.DeltaScale - 1f) * ZoomSpeed;
+
+        if((Camera.main.transform.position.y) > CameraZoom)
+        {
+            map.Zoom(-ZoomSpeed);
+        }
+
+        else
+        {
+            map.Zoom(ZoomSpeed);
+        }
+
+        CameraZoom = Camera.main.transform.position.y;
+
+        Debug.Log(CameraZoom);
+        
+
+
+    }
+
+    private IEnumerator Start()
+	{
+        Debug.Log("Cam local positioon: "+ cam.transform.localPosition);
+        Debug.Log("cam rotation: " + cam.rotation);
+        CameraZoom = Camera.main.transform.position.y;
+        
 
         // setup the gui scale according to the screen resolution
-        guiXScale = (Screen.orientation == ScreenOrientation.Landscape ? Screen.width : Screen.height) / 960;
-        guiYScale = (Screen.orientation == ScreenOrientation.Landscape ? Screen.height : Screen.width) / 1280;
+        guiXScale = (Screen.orientation == ScreenOrientation.Landscape ? Screen.width : Screen.height) / 480.0f;
+        guiYScale = (Screen.orientation == ScreenOrientation.Landscape ? Screen.height : Screen.width) / 640.0f;
 		// setup the gui area
-		guiRect = new Rect(16.0f * guiXScale, 4.0f * guiXScale, Screen.width / guiXScale - 32.0f * guiXScale, 32.0f * guiYScale);
+		//guiRect = new Rect(16.0f * guiXScale, 4.0f * guiXScale, Screen.width / guiXScale - 32.0f * guiXScale, 32.0f * guiYScale);
 
 		// create the map singleton
 		map = MapBehaviour.Instance;
 		map.CurrentCamera = Camera.main;
 
-        // **MAY HAVE TO CHANGE THIS TO GET TOUCHSCRIPT WORKING** //
+        //setting up the map for touchscript
+        map.gameObject.AddComponent<MeshCollider>();
+
+
+        map.transform.parent = GameObject.Find("Scene").transform; 
+
+      
         map.InputDelegate += UnitySlippyMap.Input.MapInput.BasicTouchAndKeyboard;
 
-		map.CurrentZoom = 10.0f;
+		map.CurrentZoom = 8.0f;
 		// UVic
 
 		map.CenterWGS84 = new double[2] { -123.310900, 48.460959 };
@@ -195,20 +289,14 @@ public class TestMap : MonoBehaviour
         layers = new List<LayerBehaviour>();
 
 		// create an Esri tile layer
+        EsriTileLayer esriLayer = map.CreateLayer<EsriTileLayer>("Esri");
+        esriLayer.BaseURL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/";
 
-      
-
-        EsriTileLayer satelliteLayer = map.CreateLayer<EsriTileLayer>("Satellite");
-        satelliteLayer.BaseURL = "http://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/";
-        layers.Add(satelliteLayer);
-
-        EsriTileLayer streetLayer = map.CreateLayer<EsriTileLayer>("Street");
-        streetLayer.BaseURL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/";
-        streetLayer.gameObject.SetActive(false);
-        layers.Add(streetLayer);
-
-        
-        
+        //Setting up the camera for TouchScript
+        //esriLayer.transform.parent = GameObject.Find("Scene").transform;
+        //Camera.main.transform.parent = GameObject.Find("Esri").transform;
+		
+        layers.Add(esriLayer);
 
         yield return null;
 	
@@ -238,6 +326,7 @@ public class TestMap : MonoBehaviour
 				destinationAngle = 0.0f;
 				currentAngle = 0.0f;
 				map.IsDirty = true;
+
 			}
 			
 			map.HasMoved = true;
