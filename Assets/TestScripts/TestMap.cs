@@ -37,13 +37,17 @@ using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 
-
+using TouchScript;
+using TouchScript.Gestures;
+using TouchScript.Layers;
 
 
 
 
 
 using UnityEngine.UI;
+using TouchScript.Pointers;
+using static TouchScript.Gestures.Gesture;
 
 public class TestMap : MonoBehaviour
 {
@@ -82,8 +86,18 @@ public class TestMap : MonoBehaviour
     public float RotationSpeed = 200f;
     public float ZoomSpeed = .25f;
 
+    //panning variable(s)
+    public bool drag;
+    public Vector3 screenPosition = Vector3.zero;
+    private Plane plane;
+    private ProjectionParams projection;
+    private Vector3 startPosition;
+    private Pointer primaryPointer;
+    private static Vector3 lastHitPosition = Vector3.zero;
+
 
     private Transform cam;
+    private Transform esriMap;
 
 
 
@@ -199,6 +213,7 @@ public class TestMap : MonoBehaviour
     private void Awake()
     {
         cam = GameObject.Find("Camera").transform;
+       
         //camPivot = transform.Find("Camera");
     }
 
@@ -206,29 +221,131 @@ public class TestMap : MonoBehaviour
     {
         TwoFingerMoveGesture.Transformed += twoFingerTransformHandler;
         ManipulationGesture.Transformed += manipulationTransformedHandler;
+
+        if (TouchManager.Instance != null)
+        {
+
+
+            //release handler
+            TouchManager.Instance.PointersReleased += pointersPressedHandler2;
+            //press handler
+            TouchManager.Instance.PointersPressed += pointersPressedHandler1;
+        }
     }
 
     private void OnDisable()
     {
+
         TwoFingerMoveGesture.Transformed -= twoFingerTransformHandler;
         ManipulationGesture.Transformed -= manipulationTransformedHandler;
-
-
     }
+
+
+
+    //pressing handler
+    private void pointersPressedHandler1(object sender, PointerEventArgs e)
+    {
+
+        var activePointers = TwoFingerMoveGesture.ActivePointers;
+        var activeCount = activePointers.Count;
+        if (activeCount == 0)
+        {
+            drag = true;
+            
+            foreach (var pointer in e.Pointers)
+            {
+                float x = pointer.Position.x;
+                float y = pointer.Position.y;
+
+                screenPosition = new Vector3(x, y, 0);
+               
+                Debug.Log("screen position vector on click: " + screenPosition);
+                Debug.Log("Mouse position on click: " + UnityEngine.Input.mousePosition);
+                    
+                
+            }
+
+            if (drag)
+            {
+                // disable the centerWGS84 update with the last location
+                map.UpdatesCenterWithLocation = false;
+
+                // apply the movements
+                Ray ray = map.CurrentCamera.ScreenPointToRay(screenPosition);
+                RaycastHit hitInfo;
+                if (Physics.Raycast(ray, out hitInfo))
+                {
+                    Vector3 displacement = Vector3.zero;
+                    if (lastHitPosition != Vector3.zero)
+                    {
+                        displacement = hitInfo.point - lastHitPosition;
+                    }
+                    lastHitPosition = new Vector3(hitInfo.point.x, hitInfo.point.y, hitInfo.point.z);
+
+                    if (displacement != Vector3.zero)
+                    {
+                        // update the centerWGS84 property to the new centerWGS84 wgs84 coordinates of the map
+                        double[] displacementMeters = new double[2] {
+                            displacement.x / map.RoundedScaleMultiplier,
+                            displacement.z / map.RoundedScaleMultiplier
+                        };
+                        double[] centerMeters = new double[2] {
+                            map.CenterEPSG900913 [0],
+                            map.CenterEPSG900913 [1]
+                        };
+                        centerMeters[0] -= displacementMeters[0];
+                        centerMeters[1] -= displacementMeters[1];
+                        map.CenterEPSG900913 = centerMeters;
+
+#if DEBUG_LOG
+    					Debug.Log("DEBUG: Map.Update: new centerWGS84 wgs84: " + centerWGS84[0] + ", " + centerWGS84[1]);
+#endif
+                    }
+
+                    map.HasMoved = true;
+                }
+            }
+        }
+    }
+
+    private void pointersPressedHandler2(object sender, PointerEventArgs e)
+    {
+        drag = false;
+
+        if (!drag)
+        {
+            // reset the last hit position
+            lastHitPosition = Vector3.zero;
+
+            // trigger a tile update
+            map.IsDirty = true;
+        }
+    }
+
+
+    
 
     private void twoFingerTransformHandler(object sender, System.EventArgs e)
     {
-        cam.localPosition -= cam.rotation * TwoFingerMoveGesture.DeltaPosition * PanSpeed;
+
+        if (esriMap == null) {
+            esriMap = GameObject.Find("[Map]").transform;
+        }
+        Vector3 delta = new Vector3(TwoFingerMoveGesture.DeltaPosition.x, 0, TwoFingerMoveGesture.DeltaPosition.y);
+        esriMap.localPosition += esriMap.rotation * delta * PanSpeed;
     
        
         counter++;
-        Debug.Log("Transformation # " + counter);
 
     }
 
 
+
     public void manipulationTransformedHandler(object sender, System.EventArgs e)
-    {
+    { 
+           
+
+    
 
         cam.transform.localPosition -= Vector3.up * (ManipulationGesture.DeltaScale - 1f) * ZoomSpeed;
 
@@ -252,6 +369,8 @@ public class TestMap : MonoBehaviour
 
     private IEnumerator Start()
 	{
+        Debug.Log("Screen position start: " + screenPosition);
+        cam = GameObject.Find("Camera").transform;
         Debug.Log("Cam local positioon: "+ cam.transform.localPosition);
         Debug.Log("cam rotation: " + cam.rotation);
         CameraZoom = Camera.main.transform.position.y;
@@ -271,10 +390,9 @@ public class TestMap : MonoBehaviour
         map.gameObject.AddComponent<MeshCollider>();
 
 
-        map.transform.parent = GameObject.Find("Scene").transform; 
 
       
-        map.InputDelegate += UnitySlippyMap.Input.MapInput.BasicTouchAndKeyboard;
+        //map.InputDelegate += UnitySlippyMap.Input.MapInput.BasicTouchAndKeyboard;
 
 		map.CurrentZoom = 8.0f;
 		// UVic
@@ -309,6 +427,11 @@ public class TestMap : MonoBehaviour
 	
 	void Update()
 	{
+
+
+
+        //screenPosition update for panning
+
 		if (destinationAngle != 0.0f)
 		{
             // changing from 2D to 3D ortho angle
