@@ -40,6 +40,9 @@ using System.Collections.Generic;
 using TouchScript;
 using TouchScript.Gestures;
 using TouchScript.Layers;
+using TouchScript.Gestures.TransformGestures;
+using TouchScript.Gestures.TransformGestures.Base;
+
 
 
 
@@ -64,20 +67,12 @@ public class TestMap : MonoBehaviour
     public float CameraZoom;
     private Transform camPivot;
 
-    private float	guiXScale;
-	private float	guiYScale;
-	private Rect	guiRect;
-	
 	private bool 	isPerspectiveView = false;
 	private float	perspectiveAngle = 30.0f;
 	private float	destinationAngle = 0.0f;
 	private float	currentAngle = 0.0f;
 	private float	animationDuration = 0.5f;
 	private float	animationStartTime = 0.0f;
-
-    //Debug variables
-    public int counter;
-    public int mouseCounter;
 
     //touchscript variables
     public ScreenTransformGesture TwoFingerMoveGesture;
@@ -87,7 +82,8 @@ public class TestMap : MonoBehaviour
     public float ZoomSpeed = .25f;
 
     //panning variable(s)
-    public bool drag;
+    public bool drag = false;
+    public bool panningStop = false;
     public Vector3 screenPosition = Vector3.zero;
     private Plane plane;
     private ProjectionParams projection;
@@ -99,116 +95,9 @@ public class TestMap : MonoBehaviour
     private Transform cam;
     private Transform esriMap;
 
-
-
-    private List<LayerBehaviour> layers;
+     private List<LayerBehaviour> layers;
     private int     currentLayerIndex = 0;
 
-    private string utfGridJsonString = "";
-
-	bool Toolbar(MapBehaviour map)
-	{
-		//GUI.matrix = Matrix4x4.Scale(new Vector3(guiXScale, guiXScale, 1.0f));
-		
-		GUILayout.BeginArea(guiRect);
-		
-		GUILayout.BeginHorizontal();
-		
-		//GUILayout.Label("Zoom: " + map.CurrentZoom);
-		
-		bool pressed = false;
-
-
-
-
-        /*
-        if (GUILayout.RepeatButton("+", GUILayout.ExpandHeight(true)))
-		{
-			map.Zoom(1.0f);
-			pressed = true;
-		}
-        */
-
-
-
-        if (Event.current.type == EventType.Repaint)
-        {
-            Rect rect = GUILayoutUtility.GetLastRect();
-            if (rect.Contains(Event.current.mousePosition))
-                pressed = true;
-        }
-
-        if (GUILayout.Button("2D/3D", GUILayout.ExpandHeight(true)))
-		{
-			if (isPerspectiveView)
-			{
-				destinationAngle = -perspectiveAngle;
-			}
-			else
-			{
-				destinationAngle = perspectiveAngle;
-			}
-			
-			animationStartTime = Time.time;
-			
-			isPerspectiveView = !isPerspectiveView;
-		}
-        if (Event.current.type == EventType.Repaint)
-        {
-            Rect rect = GUILayoutUtility.GetLastRect();
-            if (rect.Contains(Event.current.mousePosition))
-                pressed = true;
-        }
-
-      
-        if (Event.current.type == EventType.Repaint)
-        {
-            Rect rect = GUILayoutUtility.GetLastRect();
-            if (rect.Contains(Event.current.mousePosition))
-                pressed = true;
-        }
-
-        string layerMessage = String.Empty;
-        if (map.CurrentZoom > layers[currentLayerIndex].MaxZoom)
-            layerMessage = "\nZoom out!";
-        else if (map.CurrentZoom < layers[currentLayerIndex].MinZoom)
-            layerMessage = "\nZoom in!";
-        if (GUILayout.Button(((layers != null && currentLayerIndex < layers.Count) ? layers[currentLayerIndex].name + layerMessage : "Layer"), GUILayout.ExpandHeight(true)))
-        {
-            ++currentLayerIndex;
-            if (currentLayerIndex >= layers.Count)
-            {
-                currentLayerIndex = 0;
-            }
-
-            map.IsDirty = true;
-        }
-
-        /*
-        if (GUILayout.RepeatButton("-", GUILayout.ExpandHeight(true)))
-		{
-			map.Zoom(-1.0f);
-			pressed = true;
-		}
-        */
-        if (Event.current.type == EventType.Repaint)
-        {
-            Rect rect = GUILayoutUtility.GetLastRect();
-            if (rect.Contains(Event.current.mousePosition))
-                pressed = true;
-        }
-		
-		GUILayout.EndHorizontal();
-					
-		GUILayout.EndArea();
-
-        // Show any mbtiles utf string under the mouse position
-        if (!string.IsNullOrEmpty(utfGridJsonString))
-            GUILayout.Label(utfGridJsonString);
-
-		return pressed;
-
-	}
 
     private void Awake()
     {
@@ -224,27 +113,48 @@ public class TestMap : MonoBehaviour
 
         if (TouchManager.Instance != null)
         {
-
-
+            //update handler
+            TouchManager.Instance.PointersUpdated += pointersPressedHandler;
             //release handler
             TouchManager.Instance.PointersReleased += pointersPressedHandler2;
             //press handler
             TouchManager.Instance.PointersPressed += pointersPressedHandler1;
+
         }
     }
 
     private void OnDisable()
     {
-
+        if (TouchManager.Instance != null)
+        {
+            TouchManager.Instance.PointersPressed -= pointersPressedHandler;
+        }
         TwoFingerMoveGesture.Transformed -= twoFingerTransformHandler;
         ManipulationGesture.Transformed -= manipulationTransformedHandler;
     }
 
 
+    
+    private void pointersPressedHandler(object sender, PointerEventArgs e)
+    {
+
+
+            foreach (var pointer in e.Pointers)
+            {
+                float x = pointer.Position.x;
+                float y = pointer.Position.y;
+
+                screenPosition = new Vector3(x, y, 0);
+
+
+            }
+
+    }
 
     //pressing handler
     private void pointersPressedHandler1(object sender, PointerEventArgs e)
     {
+
 
         var activePointers = TwoFingerMoveGesture.ActivePointers;
         var activeCount = activePointers.Count;
@@ -252,68 +162,80 @@ public class TestMap : MonoBehaviour
         {
             drag = true;
             
-            foreach (var pointer in e.Pointers)
-            {
-                float x = pointer.Position.x;
-                float y = pointer.Position.y;
-
-                screenPosition = new Vector3(x, y, 0);
-               
-                Debug.Log("screen position vector on click: " + screenPosition);
-                Debug.Log("Mouse position on click: " + UnityEngine.Input.mousePosition);
-                    
-                
-            }
-
-            if (drag)
-            {
-                // disable the centerWGS84 update with the last location
-                map.UpdatesCenterWithLocation = false;
-
-                // apply the movements
-                Ray ray = map.CurrentCamera.ScreenPointToRay(screenPosition);
-                RaycastHit hitInfo;
-                if (Physics.Raycast(ray, out hitInfo))
-                {
-                    Vector3 displacement = Vector3.zero;
-                    if (lastHitPosition != Vector3.zero)
-                    {
-                        displacement = hitInfo.point - lastHitPosition;
-                    }
-                    lastHitPosition = new Vector3(hitInfo.point.x, hitInfo.point.y, hitInfo.point.z);
-
-                    if (displacement != Vector3.zero)
-                    {
-                        // update the centerWGS84 property to the new centerWGS84 wgs84 coordinates of the map
-                        double[] displacementMeters = new double[2] {
-                            displacement.x / map.RoundedScaleMultiplier,
-                            displacement.z / map.RoundedScaleMultiplier
-                        };
-                        double[] centerMeters = new double[2] {
-                            map.CenterEPSG900913 [0],
-                            map.CenterEPSG900913 [1]
-                        };
-                        centerMeters[0] -= displacementMeters[0];
-                        centerMeters[1] -= displacementMeters[1];
-                        map.CenterEPSG900913 = centerMeters;
-
-#if DEBUG_LOG
-    					Debug.Log("DEBUG: Map.Update: new centerWGS84 wgs84: " + centerWGS84[0] + ", " + centerWGS84[1]);
-#endif
-                    }
-
-                    map.HasMoved = true;
-                }
-            }
         }
     }
 
     private void pointersPressedHandler2(object sender, PointerEventArgs e)
     {
+        
         drag = false;
 
-        if (!drag)
+    }
+
+    void Update()
+    {
+       // Debug.Log(screenPosition);
+
+        if (drag)
         {
+
+            map.UpdatesCenterWithLocation = false;
+
+            //  Debug.Log("Panning");
+
+            // apply the movements
+            Ray ray = map.CurrentCamera.ScreenPointToRay(screenPosition);
+            //Debug.Log("1. INPUT - screenposition: " + screenPosition);
+            //Debug.Log("2. INPUT - ray: " + ray);
+            RaycastHit hitInfo;
+
+            if (Physics.Raycast(ray, out hitInfo))
+            {
+                Vector3 displacement = Vector3.zero;
+                //Debug.Log("3. INPUT - Displacement instantiate: " + displacement);
+                if (lastHitPosition != Vector3.zero)
+                {
+                    displacement = hitInfo.point - lastHitPosition;
+                    //Debug.Log("4. TEST: displacement = hitInfo.point - lastHitPosition: " + displacement);
+                }
+                lastHitPosition = new Vector3(hitInfo.point.x, hitInfo.point.y, hitInfo.point.z);
+                //Debug.Log("5. INPUT - lasthitpos: " + lastHitPosition);
+                if (displacement != Vector3.zero)
+                {
+                    // update the centerWGS84 property to the new centerWGS84 wgs84 coordinates of the map
+                    double[] displacementMeters = new double[2] {
+                            displacement.x / map.RoundedScaleMultiplier,
+                            displacement.z / map.RoundedScaleMultiplier
+                        };
+                    //Debug.Log("6. TEST: Displacement Meters: " + displacementMeters[0]
+                      // + ", " + displacementMeters[1]);
+
+
+                    double[] centerMeters = new double[2] {
+                            map.CenterEPSG900913 [0],
+                            map.CenterEPSG900913 [1]
+                        };
+                    Debug.Log("7. TEST: Center Meters: " + centerMeters[0]+ ", " + centerMeters[1]);
+
+
+                    centerMeters[0] -= displacementMeters[0];
+                    centerMeters[1] -= displacementMeters[1];
+                    map.CenterEPSG900913 = centerMeters;
+                    //Debug.Log("8. TEST: map centre: " + map.CenterEPSG900913[0] + ", " + map.CenterEPSG900913[1]);
+
+#if DEBUG_LOG
+    					Debug.Log("DEBUG: Map.Update: new centerWGS84 wgs84: " + centerWGS84[0] + ", " + centerWGS84[1]);
+#endif
+                }
+
+                map.HasMoved = true;
+            }
+
+        }
+        else if (!drag)
+        {
+            //Debug.Log("Not panning");
+
             // reset the last hit position
             lastHitPosition = Vector3.zero;
 
@@ -321,9 +243,6 @@ public class TestMap : MonoBehaviour
             map.IsDirty = true;
         }
     }
-
-
-    
 
     private void twoFingerTransformHandler(object sender, System.EventArgs e)
     {
@@ -335,12 +254,10 @@ public class TestMap : MonoBehaviour
         esriMap.localPosition += esriMap.rotation * delta * PanSpeed;
     
        
-        counter++;
+
 
     }
-
-
-
+    
     public void manipulationTransformedHandler(object sender, System.EventArgs e)
     { 
            
@@ -361,27 +278,24 @@ public class TestMap : MonoBehaviour
 
         CameraZoom = Camera.main.transform.position.y;
 
-        Debug.Log(CameraZoom);
+        //Debug.Log(CameraZoom);
         
 
 
     }
-
+    
+ 
     private IEnumerator Start()
 	{
-        Debug.Log("Screen position start: " + screenPosition);
+
+        //Debug.Log("Screen position start: " + screenPosition);
         cam = GameObject.Find("Camera").transform;
-        Debug.Log("Cam local positioon: "+ cam.transform.localPosition);
-        Debug.Log("cam rotation: " + cam.rotation);
+        //Debug.Log("Cam local positioon: "+ cam.transform.localPosition);
+        //Debug.Log("cam rotation: " + cam.rotation);
         CameraZoom = Camera.main.transform.position.y;
         
 
-        // setup the gui scale according to the screen resolution
-        guiXScale = (Screen.orientation == ScreenOrientation.Landscape ? Screen.width : Screen.height) / 480.0f;
-        guiYScale = (Screen.orientation == ScreenOrientation.Landscape ? Screen.height : Screen.width) / 640.0f;
-		// setup the gui area
-		//guiRect = new Rect(16.0f * guiXScale, 4.0f * guiXScale, Screen.width / guiXScale - 32.0f * guiXScale, 32.0f * guiYScale);
-
+       
 		// create the map singleton
 		map = MapBehaviour.Instance;
 		map.CurrentCamera = Camera.main;
@@ -392,17 +306,19 @@ public class TestMap : MonoBehaviour
 
 
       
-        //map.InputDelegate += UnitySlippyMap.Input.MapInput.BasicTouchAndKeyboard;
+       map.InputDelegate += UnitySlippyMap.Input.MapInput.BasicTouchAndKeyboard;
 
 		map.CurrentZoom = 8.0f;
 		// UVic
 
-		map.CenterWGS84 = new double[2] { -123.310900, 48.460959 };
+		map.CenterWGS84 = new double[2] { 23.7267, 37.9715 };
 		map.UsesLocation = true;
 		map.InputsEnabled = true;
-		map.ShowsGUIControls = true;
 
-		map.GUIDelegate += Toolbar;
+        //Debug.Log("Start CenterEPSG900913 [0]: " + map.CenterEPSG900913[0] + ", " +
+                    //map.CenterEPSG900913[1]);
+
+
 
         layers = new List<LayerBehaviour>();
 
@@ -425,37 +341,7 @@ public class TestMap : MonoBehaviour
 		map = null;
 	}
 	
-	void Update()
-	{
 
-
-
-        //screenPosition update for panning
-
-		if (destinationAngle != 0.0f)
-		{
-            // changing from 2D to 3D ortho angle
-
-            Vector3 cameraLeft = Quaternion.AngleAxis(-90.0f, Camera.main.transform.up) * Camera.main.transform.forward;
-			if ((Time.time - animationStartTime) < animationDuration)
-			{
-				float angle = Mathf.LerpAngle(0.0f, destinationAngle, (Time.time - animationStartTime) / animationDuration);
-				Camera.main.transform.RotateAround(Vector3.zero, cameraLeft, angle - currentAngle);
-				currentAngle = angle;
-			}
-			else
-			{
-				Camera.main.transform.RotateAround(Vector3.zero, cameraLeft, destinationAngle - currentAngle);
-				destinationAngle = 0.0f;
-				currentAngle = 0.0f;
-				map.IsDirty = true;
-
-			}
-			
-			map.HasMoved = true;
-		}
-
-	}
 	
 #if DEBUG_PROFILE
 	void LateUpdate()

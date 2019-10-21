@@ -88,34 +88,43 @@ namespace UnitySlippyMap.Input
     			
 				// apply the movements
 				Ray ray = map.CurrentCamera.ScreenPointToRay (screenPosition);
+                //Debug.Log("1. INPUT - screenposition: " + screenPosition);
+                //Debug.Log("2. INPUT - ray: " + ray);
                 RaycastHit hitInfo;
+
 				if (Physics.Raycast (ray, out hitInfo)) {
 					Vector3 displacement = Vector3.zero;
+                    //Debug.Log("3. INPUT - Displacement instantiate: " + displacement);
 					if (lastHitPosition != Vector3.zero) {
 						displacement = hitInfo.point - lastHitPosition;
+                        //Debug.Log("4. INPUT: displacement = hitInfo.point - lastHitPosition: " + displacement);
 					}
 					lastHitPosition = new Vector3 (hitInfo.point.x, hitInfo.point.y, hitInfo.point.z);
-    				
-					if (displacement != Vector3.zero) {
-						// update the centerWGS84 property to the new centerWGS84 wgs84 coordinates of the map
-						double[] displacementMeters = new double[2] {
-							displacement.x / map.RoundedScaleMultiplier,
-							displacement.z / map.RoundedScaleMultiplier
-						};
+                    //Debug.Log("5. INPUT - lasthitpos: " + lastHitPosition);
+                    if (displacement != Vector3.zero) {
+                        // update the centerWGS84 property to the new centerWGS84 wgs84 coordinates of the map
+                        double[] displacementMeters = new double[2] {
+                            displacement.x / map.RoundedScaleMultiplier,
+                            displacement.z / map.RoundedScaleMultiplier
+                        };
+                        //Debug.Log("6. INPUT: Displacement Meters: " + displacementMeters[0]
+                          //   + ", " + displacementMeters[1]); 
 						double[] centerMeters = new double[2] {
 							map.CenterEPSG900913 [0],
 							map.CenterEPSG900913 [1]
 						};
-						centerMeters [0] -= displacementMeters [0];
+                        Debug.Log("7. INPUT: Center Meters: " + centerMeters[0]+ ", " + centerMeters[1]);
+                        centerMeters [0] -= displacementMeters [0];
 						centerMeters [1] -= displacementMeters [1];
 						map.CenterEPSG900913 = centerMeters;
-    					
-						#if DEBUG_LOG
+                        //Debug.Log("8. INPUT: map centre: " + map.CenterEPSG900913[0] + ", " + map.CenterEPSG900913[1]);
+
+#if DEBUG_LOG
     					Debug.Log("DEBUG: Map.Update: new centerWGS84 wgs84: " + centerWGS84[0] + ", " + centerWGS84[1]);
-						#endif
-					}
-    
-					map.HasMoved = true;
+#endif
+                    }
+
+                    map.HasMoved = true;
 				}
 			} else if (panningStopped) {
 				// reset the last hit position
