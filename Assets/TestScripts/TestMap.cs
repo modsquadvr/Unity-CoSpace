@@ -57,22 +57,22 @@ public class TestMap : MonoBehaviour
 
     //pivot GameObject is going to be Esri GameObject
 
-    public MapBehaviour		map;
+    public MapBehaviour map;
 
 
-	public Texture	LocationTexture;
-	public Texture	MarkerTexture;
+    public Texture LocationTexture;
+    public Texture MarkerTexture;
 
 
     public float CameraZoom;
     private Transform camPivot;
 
-	private bool 	isPerspectiveView = false;
-	private float	perspectiveAngle = 30.0f;
-	private float	destinationAngle = 0.0f;
-	private float	currentAngle = 0.0f;
-	private float	animationDuration = 0.5f;
-	private float	animationStartTime = 0.0f;
+    private bool isPerspectiveView = false;
+    private float perspectiveAngle = 30.0f;
+    private float destinationAngle = 0.0f;
+    private float currentAngle = 0.0f;
+    private float animationDuration = 0.5f;
+    private float animationStartTime = 0.0f;
 
     //touchscript variables
     public ScreenTransformGesture TwoFingerMoveGesture;
@@ -95,30 +95,30 @@ public class TestMap : MonoBehaviour
     private Transform cam;
     private Transform esriMap;
 
-     private List<LayerBehaviour> layers;
-    private int     currentLayerIndex = 0;
+    private List<LayerBehaviour> layers;
+    private int currentLayerIndex = 0;
 
 
     private void Awake()
     {
         cam = GameObject.Find("Camera").transform;
-       
+
         //camPivot = transform.Find("Camera");
     }
 
     private void OnEnable()
     {
-        TwoFingerMoveGesture.Transformed += twoFingerTransformHandler;
+        //TwoFingerMoveGesture.Transformed += twoFingerTransformHandler;
         ManipulationGesture.Transformed += manipulationTransformedHandler;
 
         if (TouchManager.Instance != null)
         {
             //update handler
-            TouchManager.Instance.PointersUpdated += pointersPressedHandler;
+            TouchManager.Instance.PointersUpdated += pointersUpdateHandler;
             //release handler
-            TouchManager.Instance.PointersReleased += pointersPressedHandler2;
+            TouchManager.Instance.PointersReleased += pointersReleaseHandler;
             //press handler
-            TouchManager.Instance.PointersPressed += pointersPressedHandler1;
+            TouchManager.Instance.PointersPressed += pointersPressedHandler;
 
         }
     }
@@ -127,54 +127,30 @@ public class TestMap : MonoBehaviour
     {
         if (TouchManager.Instance != null)
         {
+            //update handler
+            TouchManager.Instance.PointersUpdated -= pointersUpdateHandler;
+            //release handler
+            TouchManager.Instance.PointersReleased -= pointersReleaseHandler;
+            //press handler
             TouchManager.Instance.PointersPressed -= pointersPressedHandler;
         }
-        TwoFingerMoveGesture.Transformed -= twoFingerTransformHandler;
+        //TwoFingerMoveGesture.Transformed -= twoFingerTransformHandler;
         ManipulationGesture.Transformed -= manipulationTransformedHandler;
     }
 
 
-    
-    private void pointersPressedHandler(object sender, PointerEventArgs e)
+
+    private void pointersUpdateHandler(object sender, PointerEventArgs e)
     {
 
 
-            foreach (var pointer in e.Pointers)
-            {
-                float x = pointer.Position.x;
-                float y = pointer.Position.y;
-
-                screenPosition = new Vector3(x, y, 0);
-
-
-            }
-
-    }
-
-    //pressing handler
-    private void pointersPressedHandler1(object sender, PointerEventArgs e)
-    {
-
-
-        var activePointers = TwoFingerMoveGesture.ActivePointers;
-        var activeCount = activePointers.Count;
-        if (activeCount == 0)
+        foreach (var pointer in e.Pointers)
         {
-            drag = true;
-            
+            float x = pointer.Position.x;
+            float y = pointer.Position.y;
+
+            screenPosition = new Vector3(x, y, 0);
         }
-    }
-
-    private void pointersPressedHandler2(object sender, PointerEventArgs e)
-    {
-        
-        drag = false;
-
-    }
-
-    void Update()
-    {
-       // Debug.Log(screenPosition);
 
         if (drag)
         {
@@ -186,7 +162,7 @@ public class TestMap : MonoBehaviour
             // apply the movements
             Ray ray = map.CurrentCamera.ScreenPointToRay(screenPosition);
             //Debug.Log("1. INPUT - screenposition: " + screenPosition);
-            //Debug.Log("2. INPUT - ray: " + ray);
+            //Debug.Log("2. INPUT - Touchpostion: " + new Vector3(Input.touches[0].position.x, Input.touches[0].position.y));
             RaycastHit hitInfo;
 
             if (Physics.Raycast(ray, out hitInfo))
@@ -208,16 +184,14 @@ public class TestMap : MonoBehaviour
                             displacement.z / map.RoundedScaleMultiplier
                         };
                     //Debug.Log("6. TEST: Displacement Meters: " + displacementMeters[0]
-                      // + ", " + displacementMeters[1]);
+                    // + ", " + displacementMeters[1]);
 
 
                     double[] centerMeters = new double[2] {
                             map.CenterEPSG900913 [0],
                             map.CenterEPSG900913 [1]
                         };
-                    Debug.Log("7. TEST: Center Meters: " + centerMeters[0]+ ", " + centerMeters[1]);
-
-
+                    //Debug.Log("7. TEST: Center Meters: " + centerMeters[0] + ", " + centerMeters[1]);
                     centerMeters[0] -= displacementMeters[0];
                     centerMeters[1] -= displacementMeters[1];
                     map.CenterEPSG900913 = centerMeters;
@@ -232,41 +206,75 @@ public class TestMap : MonoBehaviour
             }
 
         }
-        else if (!drag)
+
+    }
+
+    //pressing handler
+    private void pointersPressedHandler(object sender, PointerEventArgs e)
+    {
+        RectTransform invPanel = GameObject.Find("Menu").GetComponent<RectTransform>();
+
+        lastHitPosition = Vector3.zero;
+        var activePointers = TwoFingerMoveGesture.ActivePointers;
+        var activeCount = activePointers.Count;
+        if (activeCount == 0)
         {
-            //Debug.Log("Not panning");
-
-            // reset the last hit position
-            lastHitPosition = Vector3.zero;
-
-            // trigger a tile update
-            map.IsDirty = true;
+            if(!RectTransformUtility.RectangleContainsScreenPoint(invPanel, Input.mousePosition))
+            {
+                drag = true;
+                Debug.Log("Begin Drag");
+            }
         }
+    }
+
+    private void pointersReleaseHandler(object sender, PointerEventArgs e)
+    {
+
+        drag = false;
+
+        //Debug.Log("Not panning");
+
+        // reset the last hit position
+        lastHitPosition = Vector3.zero;
+
+        // trigger a tile update
+        map.IsDirty = true;
+
+    }
+
+    void Update()
+    {
+        // Debug.Log(screenPosition);
+
+
     }
 
     private void twoFingerTransformHandler(object sender, System.EventArgs e)
     {
 
-        if (esriMap == null) {
+        if (esriMap == null)
+        {
             esriMap = GameObject.Find("[Map]").transform;
         }
+
+
         Vector3 delta = new Vector3(TwoFingerMoveGesture.DeltaPosition.x, 0, TwoFingerMoveGesture.DeltaPosition.y);
         esriMap.localPosition += esriMap.rotation * delta * PanSpeed;
-    
-       
+
+
 
 
     }
-    
-    public void manipulationTransformedHandler(object sender, System.EventArgs e)
-    { 
-           
 
-    
+    public void manipulationTransformedHandler(object sender, System.EventArgs e)
+    {
+
+
+
 
         cam.transform.localPosition -= Vector3.up * (ManipulationGesture.DeltaScale - 1f) * ZoomSpeed;
 
-        if((Camera.main.transform.position.y) > CameraZoom)
+        if ((Camera.main.transform.position.y) > CameraZoom)
         {
             map.Zoom(-ZoomSpeed);
         }
@@ -279,70 +287,70 @@ public class TestMap : MonoBehaviour
         CameraZoom = Camera.main.transform.position.y;
 
         //Debug.Log(CameraZoom);
-        
+
 
 
     }
-    
- 
+
+
     private IEnumerator Start()
-	{
+    {
 
         //Debug.Log("Screen position start: " + screenPosition);
         cam = GameObject.Find("Camera").transform;
         //Debug.Log("Cam local positioon: "+ cam.transform.localPosition);
         //Debug.Log("cam rotation: " + cam.rotation);
         CameraZoom = Camera.main.transform.position.y;
-        
 
-       
-		// create the map singleton
-		map = MapBehaviour.Instance;
-		map.CurrentCamera = Camera.main;
+
+
+        // create the map singleton
+        map = MapBehaviour.Instance;
+        map.CurrentCamera = Camera.main;
 
         //setting up the map for touchscript
-        map.gameObject.AddComponent<MeshCollider>();
+        //map.gameObject.AddComponent<MeshCollider>();
 
 
 
-      
-       map.InputDelegate += UnitySlippyMap.Input.MapInput.BasicTouchAndKeyboard;
 
-		map.CurrentZoom = 8.0f;
-		// UVic
+        //map.InputDelegate += UnitySlippyMap.Input.MapInput.BasicTouchAndKeyboard;
 
-		map.CenterWGS84 = new double[2] { 23.7267, 37.9715 };
-		map.UsesLocation = true;
-		map.InputsEnabled = true;
+        map.CurrentZoom = 16.0f;
+        // UVic
+
+        map.CenterWGS84 = new double[2] { -123.3117, 48.4634 };
+        map.UsesLocation = true;
+        map.InputsEnabled = true;
 
         //Debug.Log("Start CenterEPSG900913 [0]: " + map.CenterEPSG900913[0] + ", " +
-                    //map.CenterEPSG900913[1]);
+        //map.CenterEPSG900913[1]);
 
 
 
         layers = new List<LayerBehaviour>();
 
-		// create an Esri tile layer
+        // create an Esri tile layer
         EsriTileLayer esriLayer = map.CreateLayer<EsriTileLayer>("Esri");
-        esriLayer.BaseURL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/";
+        esriLayer.BaseURL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/";
 
         //Setting up the camera for TouchScript
         //esriLayer.transform.parent = GameObject.Find("Scene").transform;
         //Camera.main.transform.parent = GameObject.Find("Esri").transform;
-		
+
         layers.Add(esriLayer);
 
         yield return null;
-	
-	}
-	
-	void OnApplicationQuit()
-	{
-		map = null;
-	}
-	
 
-	
+    }
+
+    void OnApplicationQuit()
+    {
+        map = null;
+    }
+
+
+
 #if DEBUG_PROFILE
 	void LateUpdate()
 	{

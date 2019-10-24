@@ -60,6 +60,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Load3DModels.cs" />
+    <Compile Include="Assets\Scripts\Inventory.cs" />
+    <Compile Include="Assets\Scripts\InventoryItem.cs" />
+    <Compile Include="Assets\Scripts\ItemDragHandler.cs" />
+    <Compile Include="Assets\Scripts\ItemDropHandler.cs" />
+    <Compile Include="Assets\Scripts\LoadModels.cs" />
     <Compile Include="Assets\TestScripts\TestMap.cs" />
     <Compile Include="Assets\TouchScript\Examples\_misc\Scripts\Checker.cs" />
     <Compile Include="Assets\TouchScript\Examples\_misc\Scripts\ExamplesList.cs" />
