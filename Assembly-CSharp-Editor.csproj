@@ -60,6 +60,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\LeanTween\Editor\LeanTweenDocumentationEditor.cs" />
     <Compile Include="Assets\TouchScript\Editor\Behaviors\Cursors\CursorManagerEditor.cs" />
     <Compile Include="Assets\TouchScript\Editor\Behaviors\TransformerEditor.cs" />
     <Compile Include="Assets\TouchScript\Editor\Debugging\PointerDebuggerWindow.cs" />

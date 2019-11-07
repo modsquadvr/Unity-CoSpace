@@ -40,6 +40,7 @@ using System.Collections.Generic;
 using TouchScript;
 using TouchScript.Gestures;
 using TouchScript.Layers;
+using TouchScript.Layers;
 using TouchScript.Gestures.TransformGestures;
 using TouchScript.Gestures.TransformGestures.Base;
 
@@ -90,7 +91,7 @@ public class TestMap : MonoBehaviour
     private Vector3 startPosition;
     private Pointer primaryPointer;
     private static Vector3 lastHitPosition = Vector3.zero;
-
+    private Vector3 newPosition;
 
     private Transform cam;
     private Transform esriMap;
@@ -98,17 +99,20 @@ public class TestMap : MonoBehaviour
     private List<LayerBehaviour> layers;
     private int currentLayerIndex = 0;
 
-
+    public FullscreenLayer fullscreenLayer;
+    public TouchLayer StandardLayer;
+    public ILayerManager layerManager;
     private void Awake()
     {
         cam = GameObject.Find("Camera").transform;
 
         //camPivot = transform.Find("Camera");
+
     }
 
     private void OnEnable()
     {
-        //TwoFingerMoveGesture.Transformed += twoFingerTransformHandler;
+        TwoFingerMoveGesture.Transformed += twoFingerTransformHandler;
         ManipulationGesture.Transformed += manipulationTransformedHandler;
 
         if (TouchManager.Instance != null)
@@ -123,6 +127,11 @@ public class TestMap : MonoBehaviour
         }
     }
 
+    private void ManageLayers()
+    {
+ 
+    }
+
     private void OnDisable()
     {
         if (TouchManager.Instance != null)
@@ -134,7 +143,7 @@ public class TestMap : MonoBehaviour
             //press handler
             TouchManager.Instance.PointersPressed -= pointersPressedHandler;
         }
-        //TwoFingerMoveGesture.Transformed -= twoFingerTransformHandler;
+        TwoFingerMoveGesture.Transformed -= twoFingerTransformHandler;
         ManipulationGesture.Transformed -= manipulationTransformedHandler;
     }
 
@@ -144,14 +153,94 @@ public class TestMap : MonoBehaviour
     {
 
 
+    }
+
+    //pressing handler
+    private void pointersPressedHandler(object sender, PointerEventArgs e)
+    {
+        GameObject tabArea = GameObject.Find("Tab Area");
+        TabGroup tabGroup = tabArea.GetComponent<TabGroup>();
+
+        Vector2 pos = new Vector2();
         foreach (var pointer in e.Pointers)
         {
-            float x = pointer.Position.x;
-            float y = pointer.Position.y;
+            pos += pointer.Position;
+        }
+        newPosition = pos / e.Pointers.Count;
 
-            screenPosition = new Vector3(x, y, 0);
+
+        lastHitPosition = Vector3.zero;
+        var activePointers = TwoFingerMoveGesture.ActivePointers;
+        var activeCount = activePointers.Count;
+        if (activeCount == 0)
+        {
+
+            if (tabGroup.index == 0)
+            {
+                RectTransform invPanel = GameObject.Find("Menu").GetComponent<RectTransform>();
+
+                if (!RectTransformUtility.RectangleContainsScreenPoint(invPanel, Input.mousePosition))
+                {
+                    drag = true;
+                    Debug.Log("Begin Drag");
+                }
+
+            }
+
+            else
+            {
+                drag = true;
+
+            }
+        }
+    }
+
+    private void pointersReleaseHandler(object sender, PointerEventArgs e)
+    {
+
+        drag = false;
+
+        //Debug.Log("Not panning");
+
+        // reset the last hit position
+        lastHitPosition = Vector3.zero;
+
+        // trigger a tile update
+        map.IsDirty = true;
+
+    }
+
+    void Update()
+    {
+        if (destinationAngle != 0.0f)
+        {
+            Vector3 cameraLeft = Quaternion.AngleAxis(-90.0f, Camera.main.transform.up) * Camera.main.transform.forward;
+            if ((Time.time - animationStartTime) < animationDuration)
+            {
+                float angle = Mathf.LerpAngle(0.0f, destinationAngle, (Time.time - animationStartTime) / animationDuration);
+                Camera.main.transform.RotateAround(Vector3.zero, cameraLeft, angle - currentAngle);
+                currentAngle = angle;
+            }
+            else
+            {
+                Camera.main.transform.RotateAround(Vector3.zero, cameraLeft, destinationAngle - currentAngle);
+                destinationAngle = 0.0f;
+                currentAngle = 0.0f;
+                map.IsDirty = true;
+            }
+
+            map.HasMoved = true;
         }
 
+
+    }
+
+
+    private void updateCamera()
+    {
+
+        screenPosition = new Vector3(Input.touches[0].position.x, Input.touches[0].position.y, 0);
+        //if (drag)
         if (drag)
         {
 
@@ -207,45 +296,6 @@ public class TestMap : MonoBehaviour
 
         }
 
-    }
-
-    //pressing handler
-    private void pointersPressedHandler(object sender, PointerEventArgs e)
-    {
-        RectTransform invPanel = GameObject.Find("Menu").GetComponent<RectTransform>();
-
-        lastHitPosition = Vector3.zero;
-        var activePointers = TwoFingerMoveGesture.ActivePointers;
-        var activeCount = activePointers.Count;
-        if (activeCount == 0)
-        {
-            if(!RectTransformUtility.RectangleContainsScreenPoint(invPanel, Input.mousePosition))
-            {
-                drag = true;
-                Debug.Log("Begin Drag");
-            }
-        }
-    }
-
-    private void pointersReleaseHandler(object sender, PointerEventArgs e)
-    {
-
-        drag = false;
-
-        //Debug.Log("Not panning");
-
-        // reset the last hit position
-        lastHitPosition = Vector3.zero;
-
-        // trigger a tile update
-        map.IsDirty = true;
-
-    }
-
-    void Update()
-    {
-        // Debug.Log(screenPosition);
-
 
     }
 
@@ -257,10 +307,7 @@ public class TestMap : MonoBehaviour
             esriMap = GameObject.Find("[Map]").transform;
         }
 
-
-        Vector3 delta = new Vector3(TwoFingerMoveGesture.DeltaPosition.x, 0, TwoFingerMoveGesture.DeltaPosition.y);
-        esriMap.localPosition += esriMap.rotation * delta * PanSpeed;
-
+        updateCamera();
 
 
 
@@ -270,7 +317,7 @@ public class TestMap : MonoBehaviour
     {
 
 
-
+        updateCamera();
 
         cam.transform.localPosition -= Vector3.up * (ManipulationGesture.DeltaScale - 1f) * ZoomSpeed;
 
@@ -285,11 +332,33 @@ public class TestMap : MonoBehaviour
         }
 
         CameraZoom = Camera.main.transform.position.y;
+        var rotation = Quaternion.Euler(0,
+                0,
+                -ManipulationGesture.DeltaRotation);
+        cam.transform.localRotation *= rotation;
+
+        //cam.transform.rotation = ManipulationGesture.DeltaRotation;
 
         //Debug.Log(CameraZoom);
 
 
 
+    }
+
+    public void ChangePerspective()
+    {
+        if (isPerspectiveView)
+        {
+            destinationAngle = -perspectiveAngle;
+        }
+
+        else
+        {
+            destinationAngle = perspectiveAngle;
+        }
+
+        animationStartTime = Time.time;
+        isPerspectiveView = !isPerspectiveView;
     }
 
 
@@ -308,8 +377,8 @@ public class TestMap : MonoBehaviour
         map = MapBehaviour.Instance;
         map.CurrentCamera = Camera.main;
 
-        //setting up the map for touchscript
-        //map.gameObject.AddComponent<MeshCollider>();
+
+
 
 
 
