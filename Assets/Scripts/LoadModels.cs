@@ -34,10 +34,21 @@ public class LoadModels : MonoBehaviour
 
 			createModel.AddComponent<ItemDragHandler>();
 
+          
+            
+
             
         }
 
         yield return null;
+    }
+
+
+    public void  OnClick()
+    {
+        Debug.Log("You clicked Model image: " + this.name);
+
+
     }
 
     // Update is called once per frame

@@ -73,7 +73,9 @@ public class TestMap : MonoBehaviour
     private float destinationAngle = 0.0f;
     private float currentAngle = 0.0f;
     private float animationDuration = 0.5f;
+    private float animationModelDuration = 1.5f;
     private float animationStartTime = 0.0f;
+    private float modelSpeed = 2.0f;
 
     //touchscript variables
     public ScreenTransformGesture TwoFingerMoveGesture;
@@ -96,12 +98,15 @@ public class TestMap : MonoBehaviour
     private Transform cam;
     private Transform esriMap;
 
+    private Vector3 maxscale = new Vector3(0.0005f, 0.0005f, 0.0005f);
+    private Vector3 minscale = new Vector3(0.0005f, 0.00001f, 0.0005f);
+
+
     private List<LayerBehaviour> layers;
     private int currentLayerIndex = 0;
 
-    public FullscreenLayer fullscreenLayer;
-    public TouchLayer StandardLayer;
-    public ILayerManager layerManager;
+    public StandardLayer standardLayer;
+    
     private void Awake()
     {
         cam = GameObject.Find("Camera").transform;
@@ -151,7 +156,29 @@ public class TestMap : MonoBehaviour
 
     private void pointersUpdateHandler(object sender, PointerEventArgs e)
     {
+        var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
+        if (Physics.Raycast(ray, out hit))
+        {
+            //Debug.Log(hit.collider.name);
+            var selection = hit.transform;
+            
 
+            if (selection.CompareTag("Selectable"))
+            {
+                var standLayer = GameObject.Find("Camera").GetComponent<StandardLayer>().enabled = true;
+
+            }
+
+
+            else
+            {
+                var standLayer = GameObject.Find("Camera").GetComponent<StandardLayer>().enabled = false;
+
+            }
+
+            
+        }
 
     }
 
@@ -160,6 +187,8 @@ public class TestMap : MonoBehaviour
     {
         GameObject tabArea = GameObject.Find("Tab Area");
         TabGroup tabGroup = tabArea.GetComponent<TabGroup>();
+
+
 
         Vector2 pos = new Vector2();
         foreach (var pointer in e.Pointers)
@@ -172,14 +201,26 @@ public class TestMap : MonoBehaviour
         lastHitPosition = Vector3.zero;
         var activePointers = TwoFingerMoveGesture.ActivePointers;
         var activeCount = activePointers.Count;
-        if (activeCount == 0)
+        if (activeCount == 1)
         {
 
             if (tabGroup.index == 0)
             {
-                RectTransform invPanel = GameObject.Find("Menu").GetComponent<RectTransform>();
+                RectTransform invPanel = GameObject.Find("Menu_Case").GetComponent<RectTransform>();
 
                 if (!RectTransformUtility.RectangleContainsScreenPoint(invPanel, Input.mousePosition))
+                {
+                    drag = true;
+                    Debug.Log("Begin Drag");
+                }
+
+            }
+
+            else if(tabGroup.index == 1)
+            {
+                RectTransform fovPanel = GameObject.Find("Menu_FOV").GetComponent<RectTransform>();
+
+                if (!RectTransformUtility.RectangleContainsScreenPoint(fovPanel, Input.mousePosition))
                 {
                     drag = true;
                     Debug.Log("Begin Drag");
@@ -232,7 +273,18 @@ public class TestMap : MonoBehaviour
             map.HasMoved = true;
         }
 
+        if (GameObject.Find("ScrollInfoControl") != null)
+        {
+            RectTransform casePanel = GameObject.Find("Content_Cases").GetComponent<RectTransform>();
+            if (!RectTransformUtility.RectangleContainsScreenPoint(casePanel, Input.mousePosition))
+            {
+                var standLayer = GameObject.Find("Camera").GetComponent<StandardLayer>().enabled = true;
+            }
 
+
+        }
+
+     
     }
 
 
@@ -345,25 +397,59 @@ public class TestMap : MonoBehaviour
 
     }
 
+    public float CameraAngleCurrent()
+    {
+        float theAngle;
+
+        if(isPerspectiveView == false)
+        {
+            theAngle = 90.0f;
+        }
+
+        else //perspective view is true
+        {
+            theAngle = 60.0f;
+        }
+
+        
+        return theAngle;
+
+    }
+    
     public void ChangePerspective()
     {
+        GameObject[] models = GameObject.FindGameObjectsWithTag("Selectable");
+
         if (isPerspectiveView)
         {
-            destinationAngle = -perspectiveAngle;
+            /*foreach (GameObject model in models)
+            {
+                model.transform.localScale = new Vector3( model.transform.localScale.x, 0.005f, model.transform.localScale.z);
+            }*/
+            destinationAngle = -perspectiveAngle; 
         }
 
         else
         {
-            destinationAngle = perspectiveAngle;
+            /*foreach (GameObject model in models)
+            {
+                model.transform.localScale = new Vector3(model.transform.localScale.x, 0.03f, model.transform.localScale.z);
+            }*/
+            destinationAngle = perspectiveAngle; 
         }
 
         animationStartTime = Time.time;
         isPerspectiveView = !isPerspectiveView;
+
+       
     }
+
+
 
 
     private IEnumerator Start()
     {
+
 
         //Debug.Log("Screen position start: " + screenPosition);
         cam = GameObject.Find("Camera").transform;
@@ -371,16 +457,13 @@ public class TestMap : MonoBehaviour
         //Debug.Log("cam rotation: " + cam.rotation);
         CameraZoom = Camera.main.transform.position.y;
 
+        var standLayer = GameObject.Find("Camera").GetComponent<StandardLayer>().enabled = false;
 
+        
 
         // create the map singleton
         map = MapBehaviour.Instance;
         map.CurrentCamera = Camera.main;
-
-
-
-
-
 
 
         //map.InputDelegate += UnitySlippyMap.Input.MapInput.BasicTouchAndKeyboard;

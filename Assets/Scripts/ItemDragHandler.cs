@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using TouchScript.Behaviors;
+using TouchScript.Gestures;
 using TouchScript.Gestures.TransformGestures;
 using TouchScript.Layers;
 using UnityEngine;
@@ -11,7 +12,7 @@ using UnitySlippyMap.Markers;
 
 
 
-public class ItemDragHandler : MonoBehaviour, IDragHandler, IDropHandler
+public class ItemDragHandler : MonoBehaviour, IDragHandler, IDropHandler, IPointerDownHandler
 {
     private GameObject canvas;
     private GameObject container;
@@ -19,13 +20,29 @@ public class ItemDragHandler : MonoBehaviour, IDragHandler, IDropHandler
     private const int EarthRadius = 6378137; //no seams with globe example
     private const double OriginShift = 2 * Math.PI * EarthRadius / 2;
 
-    public BuildingLocations bL;
+    private GameObject clone;
 
 
 
+    public Transform[] allChildren;
+    public TransformGesture transformGesture;
 
 
-public void OnDrag(PointerEventData eventData)
+    private TestMap testMap;
+
+
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        Debug.Log(this.gameObject.GetType().ToString());
+        clone = Instantiate(this.gameObject, transform.parent, false);
+        clone.name = this.name;
+
+        var eventDataNew = new PointerEventData(EventSystem.current);
+        EventSystem.current.SetSelectedGameObject(clone, eventDataNew);
+        OnDrag(eventDataNew);
+    }
+
+    public void OnDrag(PointerEventData eventData)
     {
 
         canvas = GameObject.Find("Canvas");
@@ -36,7 +53,8 @@ public void OnDrag(PointerEventData eventData)
 
     public void OnDrop(PointerEventData eventData)
     {
-        RectTransform invPanel = GameObject.Find("Menu").GetComponent<RectTransform>();
+        RectTransform invPanel = GameObject.Find("Menu_Case").GetComponent<RectTransform>();
+
 
 
         //check to see if the mouse pointer is out of the Menu box
@@ -56,6 +74,12 @@ public void OnDrag(PointerEventData eventData)
 
                 //add components
                 var prefab = Instantiate(building, building.transform.position, Quaternion.identity);
+                Transform[] allChildren = prefab.GetComponentsInChildren<Transform>();
+                foreach (Transform child in allChildren)
+                {
+                    child.tag = "Selectable";
+                }
+
                 prefab.AddComponent<BoxCollider>();
 
                 //adjusting scale
@@ -96,13 +120,19 @@ public void OnDrag(PointerEventData eventData)
                     (double)worldPos.y
                 };
 
-                AddCoordinates(worldPos.x, worldPos.y, this.name);
 
                 Debug.Log("Position: " + worldPos.x + ", " + worldPos.y);
 
                 map.CreateMarker<MarkerBehaviour>(fileName, buildingWorldPos, prefab);
                 prefab.AddComponent<TransformGesture>();
+
+                transformGesture = prefab.GetComponent<TransformGesture>();
                 prefab.AddComponent<Transformer>();
+                prefab.AddComponent<TapGesture>();
+                prefab.AddComponent<LoadCaseMenu>();
+                prefab.AddComponent<CaseDragHandler>();
+ 
+                prefab.gameObject.tag = "Selectable";
 
             }
 
@@ -112,13 +142,19 @@ public void OnDrag(PointerEventData eventData)
 
     }
 
+
     // Start is called before the first frame update
     void Start()
     {
         map = FindObjectOfType(typeof(MapBehaviour)) as MapBehaviour;
-        bL = new BuildingLocations();
+
+        testMap = GameObject.Find("Test").GetComponent<TestMap>();
+        
+
+        
     }
 
+ 
 
 
     //takes touch position and converts it to lat/long,
@@ -133,14 +169,6 @@ public void OnDrag(PointerEventData eventData)
         return new Vector2(vx, vy);
 
     }
-
-    public void AddCoordinates(double x, double y, string name)
-    {
-        bL.AddLocation(x, y, name);
-        
-
-    }
-
 
 
 }

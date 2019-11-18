@@ -262,7 +262,8 @@ namespace TouchScript.Gestures.TransformGestures
         }
 
         /// <inheritdoc />
-        protected override float doScaling(Vector2 oldScreenPos1, Vector2 oldScreenPos2, Vector2 newScreenPos1,
+        
+        /*protected override float doScaling(Vector2 oldScreenPos1, Vector2 oldScreenPos2, Vector2 newScreenPos1,
                                            Vector2 newScreenPos2, ProjectionParams projectionParams)
         {
             var newVector = projectionParams.ProjectTo(newScreenPos2, TransformPlane) -
@@ -271,6 +272,7 @@ namespace TouchScript.Gestures.TransformGestures
                             projectionParams.ProjectTo(oldScreenPos1, TransformPlane);
             return newVector.magnitude / oldVector.magnitude;
         }
+        */
 
         /// <inheritdoc />
         protected override Vector3 doOnePointTranslation(Vector2 oldScreenPos, Vector2 newScreenPos,

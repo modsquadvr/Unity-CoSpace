@@ -118,11 +118,11 @@ namespace TouchScript.Gestures
         #region Private variables
 
         [SerializeField]
-        private int numberOfTapsRequired = 1;
+        private int numberOfTapsRequired = 2;
 
         [SerializeField]
         [NullToggle(NullFloatValue = float.PositiveInfinity)]
-        private float timeLimit = float.PositiveInfinity;
+        private float timeLimit = 0.3f;
 
         [SerializeField]
         [NullToggle(NullFloatValue = float.PositiveInfinity)]

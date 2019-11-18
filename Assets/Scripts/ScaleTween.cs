@@ -21,7 +21,12 @@ public class ScaleTween : MonoBehaviour
     public void OnQuit()
     {
         LeanTween.scale(gameObject, new Vector3(0, 0, 0), 0.3f).setDelay(0.5f);
-        Application.Quit();
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit ();
+#endif
     }
-
 }
+
+
