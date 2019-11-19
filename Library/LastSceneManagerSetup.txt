@@ -1,4 +1,4 @@
 sceneSetups:
-- path: Assets/Scenes/EsriMap.unity
+- path: Assets/Scenes/Building_Extrusion.unity
   isLoaded: 1
   isActive: 1
